@@ -1,0 +1,153 @@
+/* pages/detail/detail.wxss */
+
+.page-summary-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 32rpx;
+}
+
+.page-subtitle-inline {
+  margin-bottom: 0;
+}
+
+.skeleton-card {
+  background: #FFFFFF;
+}
+
+.skeleton-line,
+.skeleton-avatar {
+  position: relative;
+  overflow: hidden;
+  background: #ECECF1;
+}
+
+.skeleton-line::after,
+.skeleton-avatar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.7) 50%, rgba(255,255,255,0) 100%);
+  animation: shimmer 1.4s infinite;
+}
+
+.detail-skeleton-title {
+  width: 240rpx;
+  height: 72rpx;
+  border-radius: 24rpx;
+}
+
+.detail-skeleton-subtitle {
+  width: 320rpx;
+  height: 24rpx;
+  border-radius: 999rpx;
+}
+
+.skeleton-line-small {
+  width: 180rpx;
+  height: 24rpx;
+  border-radius: 999rpx;
+}
+
+.skeleton-line-medium {
+  width: 260rpx;
+  height: 24rpx;
+  border-radius: 999rpx;
+}
+
+.skeleton-line-large {
+  width: 140rpx;
+  height: 72rpx;
+  border-radius: 24rpx;
+}
+
+.skeleton-avatar {
+  width: 104rpx;
+  height: 104rpx;
+  border-radius: 50%;
+}
+
+.summary-card {
+  background: linear-gradient(180deg, #FFFFFF 0%, #F8FBFF 100%);
+}
+
+.summary-top {
+  display: flex;
+  align-items: center;
+  margin-bottom: 28rpx;
+}
+
+.summary-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 104rpx;
+  height: 104rpx;
+  margin-right: 24rpx;
+  border-radius: 50%;
+  background: var(--surface-muted);
+  font-size: 56rpx;
+}
+
+.summary-main {
+  flex: 1;
+}
+
+.summary-name {
+  display: block;
+  margin-bottom: 6rpx;
+  font-size: 38rpx;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.summary-meta {
+  font-size: 26rpx;
+  color: var(--text-secondary);
+}
+
+.summary-bottom {
+  padding-top: 24rpx;
+  border-top: 1px solid var(--cell-border);
+}
+
+.summary-label {
+  display: block;
+  margin-bottom: 8rpx;
+  font-size: 24rpx;
+  color: var(--text-secondary);
+}
+
+.summary-date {
+  font-size: 34rpx;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.detail-section-header {
+  padding: 0 8rpx;
+  margin-bottom: 20rpx;
+}
+
+.row-value {
+  margin-left: 24rpx;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.notes-card {
+  line-height: 1.7;
+}
+
+.notes-text {
+  font-size: 28rpx;
+  color: var(--text-primary);
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}

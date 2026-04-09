@@ -1,0 +1,116 @@
+/* pages/settings/settings.wxss */
+
+.profile-card {
+  display: flex;
+  align-items: center;
+}
+
+.profile-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 104rpx;
+  height: 104rpx;
+  margin-right: 24rpx;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #0A84FF 0%, #5AC8FA 100%);
+  color: #FFFFFF;
+  font-size: 42rpx;
+  font-weight: 700;
+}
+
+.profile-main {
+  flex: 1;
+}
+
+.profile-name {
+  display: block;
+  margin-bottom: 8rpx;
+  font-size: 34rpx;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.profile-desc {
+  font-size: 24rpx;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.stats-header,
+.settings-section-header {
+  padding: 0 8rpx;
+  margin-bottom: 20rpx;
+}
+
+.stats-grid {
+  display: flex;
+}
+
+.stat-item {
+  flex: 1;
+  text-align: center;
+}
+
+.stat-item:not(:last-child) {
+  border-right: 1px solid var(--cell-border);
+}
+
+.stat-value {
+  display: block;
+  margin-bottom: 8rpx;
+  font-size: 42rpx;
+  font-weight: 700;
+  color: var(--primary-color);
+}
+
+.stat-label {
+  font-size: 24rpx;
+  color: var(--text-secondary);
+}
+
+.settings-cell {
+  min-height: 110rpx;
+}
+
+.item-leading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56rpx;
+  height: 56rpx;
+  margin-right: 18rpx;
+  border-radius: 16rpx;
+  color: #FFFFFF;
+  font-size: 28rpx;
+  font-weight: 700;
+}
+
+.item-leading.blue {
+  background: #0A84FF;
+}
+
+.item-leading.green {
+  background: #34C759;
+}
+
+.item-leading.orange {
+  background: #FF9500;
+}
+
+.item-leading.gray {
+  background: #8E8E93;
+}
+
+.version-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24rpx 0 48rpx;
+}
+
+.version-text {
+  margin-bottom: 8rpx;
+  font-size: 24rpx;
+  color: var(--text-secondary);
+}

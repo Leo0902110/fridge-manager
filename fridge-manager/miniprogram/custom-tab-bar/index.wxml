@@ -1,0 +1,20 @@
+<view class="tabbar-root">
+  <view class="tabbar-shell">
+    <view class="tabbar-indicator" style="{{indicatorStyle}}"></view>
+    <view
+      class="tabbar-item {{selected === index ? 'active' : ''}}"
+      wx:for="{{list}}"
+      wx:key="pagePath"
+      data-path="{{item.pagePath}}"
+      data-index="{{index}}"
+      bindtap="switchTab"
+      hover-class="tabbar-item-pressed"
+      hover-stay-time="60"
+    >
+      <view class="tabbar-icon-wrap">
+        <image class="tabbar-icon" src="{{selected === index ? item.selectedIconPath : item.iconPath}}" mode="aspectFit" />
+      </view>
+      <text class="tabbar-text">{{item.text}}</text>
+    </view>
+  </view>
+</view>

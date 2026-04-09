@@ -1,0 +1,246 @@
+/* pages/index/index.wxss */
+
+.page-summary-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 32rpx;
+}
+
+.page-subtitle-inline {
+  margin-bottom: 0;
+}
+
+.refresh-state {
+  flex-shrink: 0;
+  margin-left: 20rpx;
+  padding: 8rpx 14rpx;
+  border-radius: 999rpx;
+  background: rgba(0, 122, 255, 0.08);
+  color: var(--primary-color);
+  font-size: 22rpx;
+  font-weight: 600;
+}
+
+.refresh-state.loading {
+  background: rgba(255, 149, 0, 0.12);
+  color: var(--warning-color);
+}
+
+.hero-card {
+  background: linear-gradient(180deg, #FFFFFF 0%, #F7FAFF 100%);
+}
+
+.skeleton-card {
+  background: #FFFFFF;
+}
+
+.skeleton-line,
+.skeleton-avatar,
+.skeleton-block {
+  position: relative;
+  overflow: hidden;
+  background: #ECECF1;
+}
+
+.skeleton-line::after,
+.skeleton-avatar::after,
+.skeleton-block::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.7) 50%, rgba(255,255,255,0) 100%);
+  animation: shimmer 1.4s infinite;
+}
+
+.skeleton-line {
+  height: 24rpx;
+  border-radius: 999rpx;
+}
+
+.skeleton-line-small {
+  width: 180rpx;
+}
+
+.skeleton-line-medium {
+  width: 260rpx;
+}
+
+.skeleton-line-large {
+  width: 140rpx;
+  height: 72rpx;
+  border-radius: 24rpx;
+}
+
+.skeleton-metrics {
+  display: flex;
+}
+
+.skeleton-block {
+  flex: 1;
+  height: 96rpx;
+  border-radius: 20rpx;
+}
+
+.skeleton-block:not(:last-child) {
+  margin-right: 16rpx;
+}
+
+.skeleton-cell {
+  align-items: center;
+}
+
+.skeleton-avatar {
+  width: 76rpx;
+  height: 76rpx;
+  margin-right: 20rpx;
+  border-radius: 50%;
+}
+
+.hero-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 28rpx;
+}
+
+.hero-label {
+  display: block;
+  margin-bottom: 12rpx;
+  font-size: 26rpx;
+  color: var(--text-secondary);
+}
+
+.hero-value {
+  display: block;
+  font-size: 80rpx;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.hero-chip {
+  padding: 10rpx 18rpx;
+  border-radius: 999rpx;
+  background: rgba(0, 122, 255, 0.1);
+  color: var(--primary-color);
+  font-size: 24rpx;
+  font-weight: 600;
+}
+
+.hero-metrics {
+  display: flex;
+  padding-top: 24rpx;
+  border-top: 1px solid var(--cell-border);
+}
+
+.metric-item {
+  flex: 1;
+  text-align: center;
+}
+
+.metric-item:not(:last-child) {
+  border-right: 1px solid var(--cell-border);
+}
+
+.metric-value {
+  display: block;
+  font-size: 42rpx;
+  font-weight: 700;
+  margin-bottom: 8rpx;
+}
+
+.metric-value.fresh {
+  color: var(--success-color);
+}
+
+.metric-value.warning {
+  color: var(--warning-color);
+}
+
+.metric-value.expired {
+  color: var(--danger-color);
+}
+
+.metric-label {
+  font-size: 24rpx;
+  color: var(--text-secondary);
+}
+
+.section-block {
+  margin-bottom: 16rpx;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20rpx;
+  padding: 0 8rpx;
+}
+
+.section-hint {
+  font-size: 24rpx;
+  color: var(--text-secondary);
+}
+
+.countdown-chip {
+  padding: 10rpx 16rpx;
+  border-radius: 999rpx;
+  background: rgba(255, 149, 0, 0.12);
+  color: var(--warning-color);
+  font-size: 24rpx;
+  font-weight: 600;
+}
+
+.segmented-control {
+  display: flex;
+  padding: 4rpx;
+  background: #E8E8ED;
+  border-radius: 16rpx;
+}
+
+.segment-item {
+  padding: 10rpx 24rpx;
+  border-radius: 14rpx;
+  font-size: 26rpx;
+  color: var(--text-primary);
+}
+
+.segment-item.active {
+  background: #FFFFFF;
+  box-shadow: 0 4rpx 12rpx rgba(15, 23, 42, 0.08);
+}
+
+.food-cell {
+  min-height: 108rpx;
+}
+
+.food-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 76rpx;
+  height: 76rpx;
+  margin-right: 20rpx;
+  border-radius: 50%;
+  background: var(--surface-muted);
+  font-size: 40rpx;
+}
+
+.empty-title {
+  margin-bottom: 12rpx;
+  font-size: 34rpx;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.empty-btn {
+  width: 260rpx;
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}

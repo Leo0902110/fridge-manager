@@ -1,0 +1,134 @@
+<!--pages/index/index.wxml - 首页-->
+<view class="container tab-page">
+  <text class="large-title">冰箱</text>
+  <view class="page-summary-row">
+    <text class="page-subtitle page-subtitle-inline">库存、临期提醒和每日概览都在这里。</text>
+    <text class="refresh-state {{loading ? 'loading' : ''}}">{{lastUpdatedText}}</text>
+  </view>
+
+  <view wx:if="{{loading && !initialized}}">
+    <view class="hero-card card skeleton-card">
+      <view class="skeleton-line skeleton-line-small mb-16"></view>
+      <view class="skeleton-line skeleton-line-large mb-32"></view>
+      <view class="skeleton-metrics">
+        <view class="skeleton-block"></view>
+        <view class="skeleton-block"></view>
+        <view class="skeleton-block"></view>
+      </view>
+    </view>
+
+    <view class="section-header">
+      <text class="section-title">全部食物</text>
+    </view>
+    <view class="list-group">
+      <view class="list-cell skeleton-cell" wx:for="{{[1,2,3]}}" wx:key="*this">
+        <view class="skeleton-avatar"></view>
+        <view class="list-main">
+          <view class="skeleton-line skeleton-line-medium mb-8"></view>
+          <view class="skeleton-line skeleton-line-small"></view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <block wx:else>
+
+  <view class="hero-card card">
+    <view class="hero-top">
+      <view>
+        <text class="hero-label">当前库存</text>
+        <text class="hero-value">{{stats.total}}</text>
+      </view>
+      <text class="hero-chip">{{refreshing ? '刷新中' : '已同步'}}</text>
+    </view>
+
+    <view class="hero-metrics">
+      <view class="metric-item">
+        <text class="metric-value fresh">{{stats.fresh_count}}</text>
+        <text class="metric-label">新鲜</text>
+      </view>
+      <view class="metric-item">
+        <text class="metric-value warning">{{stats.warning_count}}</text>
+        <text class="metric-label">临期</text>
+      </view>
+      <view class="metric-item">
+        <text class="metric-value expired">{{stats.expired_count}}</text>
+        <text class="metric-label">过期</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="section-block" wx:if="{{stats.warning_foods.length > 0}}">
+    <view class="section-header">
+      <text class="section-title">临期提醒</text>
+      <text class="section-hint">{{stats.warning_foods.length}} 项</text>
+    </view>
+
+    <view class="list-group">
+      <view
+        class="list-cell"
+        wx:for="{{stats.warning_foods}}"
+        wx:key="id"
+        bindtap="goToDetail"
+        data-id="{{item.id}}"
+      >
+        <view class="list-main">
+          <text class="list-title">{{item.name}}</text>
+          <text class="list-subtitle">建议优先处理，避免浪费。</text>
+        </view>
+        <view class="right-meta">
+          <text class="countdown-chip">剩 {{daysLeft(item.expiry_date)}} 天</text>
+          <text class="chevron">›</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="section-header">
+    <text class="section-title">全部食物</text>
+    <view class="segmented-control">
+      <text
+        class="segment-item {{filter === 'all' ? 'active' : ''}}"
+        bindtap="setFilter"
+        data-filter="all"
+      >全部</text>
+      <text
+        class="segment-item {{filter === 'warning' ? 'active' : ''}}"
+        bindtap="setFilter"
+        data-filter="warning"
+      >临期</text>
+    </view>
+  </view>
+
+  <view class="list-group" wx:if="{{foodList.length > 0}}">
+    <view
+      class="list-cell food-cell"
+      wx:for="{{foodList}}"
+      wx:key="id"
+      bindtap="goToDetail"
+      data-id="{{item.id}}"
+    >
+      <view class="food-icon">
+        <text>{{getCategoryIcon(item.category)}}</text>
+      </view>
+      <view class="list-main">
+        <text class="list-title">{{item.name}}</text>
+        <text class="list-subtitle">{{item.location === 'fridge' ? '冷藏' : item.location === 'freezer' ? '冷冻' : '常温'}} · 放入 {{formatDate(item.put_date)}}</text>
+      </view>
+      <view class="right-meta">
+        <view class="status-tag status-{{calcDaysLeft(item.expiry_date).type}}">
+          {{calcDaysLeft(item.expiry_date).text}}
+        </view>
+        <text class="chevron">›</text>
+      </view>
+    </view>
+  </view>
+  <view class="empty-state card" wx:else>
+    <view class="icon">🧊</view>
+    <text class="empty-title">冰箱还是空的</text>
+    <text class="text mb-16">先添加几样食物，后面就能自动看到临期提醒。</text>
+    <text class="muted-caption mb-32">首页支持下拉刷新，库存变化会立即同步。</text>
+    <button class="btn btn-primary empty-btn" bindtap="goToAdd">添加食物</button>
+  </view>
+  </block>
+</view>

@@ -1,0 +1,165 @@
+<!--pages/add/add.wxml - 添加食物页面-->
+<view class="container tab-page">
+  <text class="large-title">添加</text>
+  <view class="page-summary-row">
+    <text class="page-subtitle page-subtitle-inline">拍一张照片，或者手动补充信息。</text>
+    <text class="refresh-state {{recognizing || submitting ? 'loading' : ''}}">{{recognizing ? '识别中' : submitting ? '保存中' : '待输入'}}</text>
+  </view>
+
+  <view class="card capture-card">
+    <view class="section-header capture-header">
+      <text class="section-title">拍照识别</text>
+      <text class="section-hint">{{recognizing ? '正在分析图片' : imagePath ? '已选择图片' : 'AI 自动填充'}}</text>
+    </view>
+
+    <view class="camera-panel" bindtap="chooseImage" wx:if="{{!imagePath}}">
+      <text class="camera-icon">📷</text>
+      <text class="camera-title">拍照或从相册选择</text>
+      <text class="camera-subtitle">识别结果会自动填入下方表单。</text>
+    </view>
+
+    <view class="image-preview" wx:else>
+      <image
+        class="preview-image"
+        src="{{imagePath}}"
+        mode="aspectFill"
+        bindtap="chooseImage"
+      />
+      <view class="processing-banner" wx:if="{{recognizing}}">
+        <text class="processing-title">图片识别中</text>
+        <text class="processing-subtitle">正在提取名称、类别和参考保质期。</text>
+      </view>
+      <view class="preview-toolbar">
+        <button class="btn btn-outline preview-btn" bindtap="chooseImage" disabled="{{recognizing || submitting}}">重新选择</button>
+      </view>
+    </view>
+  </view>
+
+  <view class="card empty-recognition-card" wx:if="{{imagePath && !recognizing && recognitionResults.length === 0}}">
+    <text class="empty-recognition-title">没有识别到明确结果</text>
+    <text class="empty-recognition-subtitle">你仍然可以直接手动填写信息并保存。</text>
+  </view>
+
+  <view class="card" wx:if="{{recognitionResults.length > 0}}">
+    <view class="section-header result-header">
+      <text class="section-title">识别结果</text>
+      <text class="section-hint">选择一个作为表单初稿</text>
+    </view>
+
+    <view class="list-group result-group">
+      <view
+        class="list-cell result-cell {{selectedIndex === index ? 'active' : ''}}"
+        wx:for="{{recognitionResults}}"
+        wx:key="name"
+        bindtap="selectResult"
+        data-index="{{index}}"
+      >
+        <text class="result-icon">{{getCategoryIcon(item.category)}}</text>
+        <view class="list-main">
+          <text class="list-title">{{item.name}}</text>
+          <text class="list-subtitle">{{item.confidence}}% 匹配 · {{item.category}}</text>
+        </view>
+        <text class="result-state">{{selectedIndex === index ? '已选' : '选择'}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="section-header form-header">
+      <text class="section-title">食物信息</text>
+    </view>
+
+    <view class="field-group">
+      <view class="field-row">
+        <text class="field-label">食物名称</text>
+        <input
+          class="field-control"
+          placeholder="请输入食物名称"
+          value="{{formData.name}}"
+          bindinput="onInputChange"
+          data-field="name"
+          disabled="{{submitting}}"
+        />
+      </view>
+
+      <view class="field-row">
+        <text class="field-label">食物类别</text>
+        <picker
+          mode="selector"
+          range="{{categories}}"
+          value="{{categoryIndex}}"
+          bindchange="onCategoryChange"
+          disabled="{{submitting}}"
+        >
+          <view class="field-picker picker-display">
+            <text>{{categories[categoryIndex] || '选择类别'}}</text>
+            <text class="chevron">›</text>
+          </view>
+        </picker>
+      </view>
+
+      <view class="field-row">
+        <text class="field-label">存放位置</text>
+        <view class="pill-group">
+          <view
+            class="pill-option {{formData.location === 'fridge' ? 'active' : ''}}"
+            bindtap="selectLocation"
+            data-location="fridge"
+          >
+            <text class="mr-8">🧊</text>
+            <text>冷藏</text>
+          </view>
+          <view
+            class="pill-option {{formData.location === 'freezer' ? 'active' : ''}}"
+            bindtap="selectLocation"
+            data-location="freezer"
+          >
+            <text class="mr-8">❄️</text>
+            <text>冷冻</text>
+          </view>
+          <view
+            class="pill-option {{formData.location === 'room' ? 'active' : ''}}"
+            bindtap="selectLocation"
+            data-location="room"
+          >
+            <text class="mr-8">🏠</text>
+            <text>常温</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="field-row">
+        <text class="field-label">保质期（天）</text>
+        <input
+          class="field-control"
+          type="number"
+          placeholder="自动识别或手动输入"
+          value="{{formData.shelf_life_days}}"
+          bindinput="onInputChange"
+          data-field="shelf_life_days"
+          disabled="{{submitting}}"
+        />
+        <text class="field-helper" wx:if="{{autoShelfLife}}">建议值：{{autoShelfLife}} 天</text>
+      </view>
+
+      <view class="field-row">
+        <text class="field-label">备注</text>
+        <textarea
+          class="field-textarea"
+          placeholder="可选，例如品牌、购买地点等"
+          value="{{formData.notes}}"
+          bindinput="onInputChange"
+          data-field="notes"
+          maxlength="100"
+          disabled="{{submitting}}"
+        />
+      </view>
+    </view>
+  </view>
+
+  <button
+    class="btn btn-primary submit-btn"
+    bindtap="submitFood"
+    disabled="{{submitting || recognizing}}"
+  >{{recognizing ? '识别中...' : submitting ? '保存中...' : '保存到冰箱'}}</button>
+</view>

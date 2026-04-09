@@ -1,0 +1,138 @@
+/* pages/add/add.wxss */
+
+.page-summary-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 32rpx;
+}
+
+.page-subtitle-inline {
+  margin-bottom: 0;
+}
+
+.capture-header,
+.result-header,
+.form-header {
+  padding: 0;
+  margin-bottom: 20rpx;
+}
+
+.camera-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300rpx;
+  border-radius: 24rpx;
+  background: linear-gradient(180deg, #FAFBFF 0%, #F1F4FA 100%);
+  border: 2rpx dashed rgba(0, 122, 255, 0.24);
+}
+
+.camera-icon {
+  font-size: 80rpx;
+  margin-bottom: 18rpx;
+}
+
+.camera-title {
+  margin-bottom: 8rpx;
+  font-size: 32rpx;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.camera-subtitle {
+  font-size: 24rpx;
+  color: var(--text-secondary);
+}
+
+.image-preview {
+  position: relative;
+  overflow: hidden;
+  border-radius: 24rpx;
+}
+
+.preview-image {
+  width: 100%;
+  height: 420rpx;
+  border-radius: 24rpx;
+  background: #000000;
+}
+
+.preview-toolbar {
+  margin-top: 20rpx;
+}
+
+.processing-banner {
+  position: absolute;
+  left: 24rpx;
+  right: 24rpx;
+  bottom: 120rpx;
+  padding: 20rpx 24rpx;
+  border-radius: 20rpx;
+  background: rgba(17, 17, 17, 0.78);
+  color: #FFFFFF;
+}
+
+.processing-title {
+  display: block;
+  margin-bottom: 6rpx;
+  font-size: 28rpx;
+  font-weight: 600;
+}
+
+.processing-subtitle {
+  font-size: 22rpx;
+  opacity: 0.86;
+}
+
+.preview-btn {
+  height: 84rpx;
+}
+
+.empty-recognition-card {
+  background: linear-gradient(180deg, #FFFFFF 0%, #FFF9F0 100%);
+}
+
+.empty-recognition-title {
+  display: block;
+  margin-bottom: 8rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.empty-recognition-subtitle {
+  font-size: 24rpx;
+  color: var(--text-secondary);
+}
+
+.result-group {
+  margin-bottom: 0;
+}
+
+.result-cell.active {
+  background: rgba(0, 122, 255, 0.08);
+}
+
+.result-icon {
+  margin-right: 18rpx;
+  font-size: 38rpx;
+}
+
+.result-state {
+  margin-left: 16rpx;
+  font-size: 24rpx;
+  color: var(--primary-color);
+  font-weight: 600;
+}
+
+.picker-display {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.submit-btn {
+  margin-bottom: 32rpx;
+}
