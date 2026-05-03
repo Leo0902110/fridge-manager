@@ -10,7 +10,7 @@ page {
   --bg-color: #F2F2F7;
   --card-bg: #FFFFFF;
   --surface-muted: #F8F8FC;
-  --border-radius: 24rpx;
+  --border-radius: 20rpx;
   --shadow: 0 10rpx 30rpx rgba(15, 23, 42, 0.06);
   --cell-border: rgba(60, 60, 67, 0.12);
   background-color: var(--bg-color);
@@ -116,16 +116,19 @@ button::after {
   align-items: center;
   justify-content: center;
   width: 100%;
-  height: 100rpx;
+  height: 92rpx;
   border: none;
-  border-radius: var(--border-radius);
-  font-size: 34rpx;
-  font-weight: 600;
-  transition: opacity 0.2s;
+  border-radius: 18rpx;
+  font-size: 32rpx;
+  font-weight: 700;
+  letter-spacing: 0;
+  box-sizing: border-box;
+  transition: opacity 0.16s ease, transform 0.16s ease, box-shadow 0.16s ease;
 }
 
 .btn:active {
-  opacity: 0.7;
+  opacity: 0.82;
+  transform: scale(0.985);
 }
 
 .btn[disabled] {
@@ -135,11 +138,13 @@ button::after {
 .btn-primary {
   background: var(--primary-color);
   color: #FFFFFF;
+  box-shadow: 0 12rpx 24rpx rgba(0, 122, 255, 0.22);
 }
 
 .btn-success {
   background: var(--success-color);
   color: #FFFFFF;
+  box-shadow: 0 12rpx 24rpx rgba(52, 199, 89, 0.2);
 }
 
 .btn-warning {
@@ -150,12 +155,14 @@ button::after {
 .btn-danger {
   background: var(--danger-color);
   color: #FFFFFF;
+  box-shadow: 0 12rpx 24rpx rgba(255, 59, 48, 0.18);
 }
 
 .btn-outline {
-  background: #FFFFFF;
-  border: 2rpx solid rgba(0, 122, 255, 0.22);
+  background: rgba(0, 122, 255, 0.07);
+  border: 2rpx solid rgba(0, 122, 255, 0.16);
   color: var(--primary-color);
+  box-shadow: none;
 }
 
 .page-subtitle {
@@ -298,11 +305,20 @@ button::after {
   justify-content: center;
   min-width: 168rpx;
   margin: 8rpx;
-  padding: 18rpx 22rpx;
-  border-radius: 20rpx;
+  min-height: 72rpx;
+  padding: 16rpx 22rpx;
+  border-radius: 18rpx;
   background: #FFFFFF;
   border: 2rpx solid transparent;
   box-sizing: border-box;
+  font-size: 28rpx;
+  font-weight: 600;
+  transition: opacity 0.16s ease, transform 0.16s ease;
+}
+
+.pill-option:active {
+  opacity: 0.82;
+  transform: scale(0.98);
 }
 
 .pill-option.active {

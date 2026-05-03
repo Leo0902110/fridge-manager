@@ -6,18 +6,21 @@ Component({
       {
         pagePath: 'pages/index/index',
         text: '首页',
+        symbol: '⌂',
         iconPath: '/images/home.png',
         selectedIconPath: '/images/home-active.png'
       },
       {
         pagePath: 'pages/add/add',
         text: '添加',
+        symbol: '+',
         iconPath: '/images/add.png',
         selectedIconPath: '/images/add-active.png'
       },
       {
         pagePath: 'pages/settings/settings',
         text: '我的',
+        symbol: '人',
         iconPath: '/images/user.png',
         selectedIconPath: '/images/user-active.png'
       }

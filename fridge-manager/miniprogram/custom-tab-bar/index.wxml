@@ -12,7 +12,7 @@
       hover-stay-time="60"
     >
       <view class="tabbar-icon-wrap">
-        <image class="tabbar-icon" src="{{selected === index ? item.selectedIconPath : item.iconPath}}" mode="aspectFit" />
+        <text class="tabbar-symbol">{{item.symbol}}</text>
       </view>
       <text class="tabbar-text">{{item.text}}</text>
     </view>
