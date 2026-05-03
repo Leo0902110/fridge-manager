@@ -1,4 +1,7 @@
 // app.js
+const DEVTOOLS_API_BASE_URL = 'http://127.0.0.1:8000/api/v1'
+const LAN_API_BASE_URL = 'http://192.168.31.107:8000/api/v1'
+
 App({
   onLaunch() {
     // 小程序启动时执行
@@ -27,7 +30,9 @@ App({
   
   globalData: {
     // API 基础地址（开发时改为你的后端地址）
-    API_BASE_URL: 'http://127.0.0.1:8000/api/v1', // 微信开发者工具模拟器本机地址
+    API_BASE_URL: wx.getSystemInfoSync().platform === 'devtools'
+      ? DEVTOOLS_API_BASE_URL
+      : LAN_API_BASE_URL,
     
     // 用户信息
     userInfo: null,
