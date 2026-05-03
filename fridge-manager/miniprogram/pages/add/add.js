@@ -4,6 +4,11 @@ const api = require('../../utils/api.js')
 
 const CATEGORIES = ['蔬菜', '水果', '肉类', '海鲜', '蛋类', '乳制品', '豆制品', '主食', '熟食', '剩菜', '其他']
 const COOKED_KEYWORDS = ['熟食', '剩菜', '便当', '餐盘', '拼盘', '套餐', '盒饭', '饭盒', '炒菜', '炒饭', '盖饭', '剩饭', '汤']
+const LOCATION_LABELS = {
+  fridge: '冷藏',
+  freezer: '冷冻',
+  room: '常温',
+}
 
 function defaultCategoryIndex(category) {
   const index = CATEGORIES.indexOf(category)
@@ -13,6 +18,7 @@ function defaultCategoryIndex(category) {
 function buildSelectedItem(result, sourceIndex, imagePath) {
   const category = result.category || '其他'
   const shelfLife = result.shelf_life_days || getDefaultShelfLife(result.name, category)
+  const recommendedLocation = result.recommended_location || getDefaultLocation(result.name, category)
   return {
     sourceIndex,
     name: result.name || '',
@@ -20,6 +26,9 @@ function buildSelectedItem(result, sourceIndex, imagePath) {
     categoryIndex: defaultCategoryIndex(category),
     confidence: result.confidence || 80,
     shelf_life_days: shelfLife ? String(shelfLife) : '',
+    shelfProfile: result.shelfProfile || null,
+    recommended_location: recommendedLocation,
+    storage_tip: result.storage_tip || getDefaultStorageTip(result.name, category, recommendedLocation),
     notes: '',
     imagePath: '',
     cropStatus: imagePath ? '使用原图' : '无图片',
@@ -32,6 +41,45 @@ function getDefaultShelfLife(name, category) {
     return 2
   }
   return ''
+}
+
+function getDefaultLocation(name, category) {
+  const text = `${name || ''}${category || ''}`
+  if (category === '肉类' || category === '海鲜') {
+    return 'freezer'
+  }
+  if (['土豆', '洋葱', '大蒜', '姜', '香蕉', '面包'].some(keyword => text.indexOf(keyword) >= 0)) {
+    return 'room'
+  }
+  return 'fridge'
+}
+
+function getDefaultStorageTip(name, category, location) {
+  if (category === '熟食' || category === '剩菜') {
+    return '按整份熟食管理，建议两天内吃完'
+  }
+  if (location === 'freezer') {
+    return '短期不吃建议分装冷冻'
+  }
+  if (location === 'room') {
+    return '阴凉通风保存，切开后冷藏'
+  }
+  return '冷藏保存，尽快食用'
+}
+
+function buildShelfProfile(ref) {
+  return {
+    fridge: ref.fridge_days || 0,
+    freezer: ref.freezer_days || 0,
+    room: ref.room_temp_days || 0,
+  }
+}
+
+function getShelfLifeByLocation(profile, location) {
+  if (!profile) {
+    return ''
+  }
+  return profile[location] || profile.fridge || profile.freezer || profile.room || ''
 }
 
 Page({
@@ -59,6 +107,7 @@ Page({
     },
 
     autoShelfLife: null,
+    storageSuggestion: '',
     recognizing: false,
     submitting: false,
   },
@@ -219,36 +268,37 @@ Page({
       return
     }
 
-    if (item.shelf_life_days) {
-      return
-    }
-
     const defaultShelfLife = getDefaultShelfLife(item.name, item.category)
-    if (defaultShelfLife) {
+    if (!item.shelf_life_days && defaultShelfLife) {
       this.setData({
         [`selectedItems[${index}].shelf_life_days`]: String(defaultShelfLife),
       })
-      return
     }
 
     try {
-      const ref = await api.food.getShelfLifeReference(item.name)
+      const ref = await api.food.getShelfLifeReference(item.name, item.category)
       if (ref.success && ref.data.length > 0) {
         const shelfRef = ref.data[0]
-        const shelfLife = shelfRef.fridge_days || shelfRef.freezer_days || shelfRef.room_temp_days || 7
+        const profile = buildShelfProfile(shelfRef)
+        const shelfLife = getShelfLifeByLocation(profile, this.data.formData.location) || item.shelf_life_days || 7
         this.setData({
           [`selectedItems[${index}].shelf_life_days`]: String(shelfLife),
+          [`selectedItems[${index}].shelfProfile`]: profile,
+          [`selectedItems[${index}].recommended_location`]: shelfRef.recommended_location || item.recommended_location,
+          [`selectedItems[${index}].storage_tip`]: shelfRef.storage_tip || item.storage_tip,
         })
-      } else {
+      } else if (!item.shelf_life_days) {
         this.setData({
           [`selectedItems[${index}].shelf_life_days`]: '7',
         })
       }
     } catch (err) {
       console.error('查询保质期失败:', err)
-      this.setData({
-        [`selectedItems[${index}].shelf_life_days`]: '7',
-      })
+      if (!item.shelf_life_days) {
+        this.setData({
+          [`selectedItems[${index}].shelf_life_days`]: '7',
+        })
+      }
     }
   },
 
@@ -410,6 +460,23 @@ Page({
     this.setData({
       'formData.location': location,
     })
+    this.applyLocationShelfLife(location)
+    if (this.data.formData.name.trim()) {
+      this.fillManualShelfLife()
+    }
+  },
+
+  applyLocationShelfLife(location) {
+    const updates = {}
+    this.data.selectedItems.forEach((item, index) => {
+      const shelfLife = getShelfLifeByLocation(item.shelfProfile, location)
+      if (shelfLife) {
+        updates[`selectedItems[${index}].shelf_life_days`] = String(shelfLife)
+      }
+    })
+    if (Object.keys(updates).length > 0) {
+      this.setData(updates)
+    }
   },
 
   onInputChange(e) {
@@ -422,6 +489,9 @@ Page({
     this.setData({
       [`formData.${field}`]: value,
     })
+    if (field === 'name' && value.trim()) {
+      this.fillManualShelfLife()
+    }
   },
 
   onSelectedInputChange(e) {
@@ -457,6 +527,9 @@ Page({
       categoryIndex: index,
       'formData.category': CATEGORIES[index],
     })
+    if (this.data.formData.name.trim()) {
+      this.fillManualShelfLife()
+    }
   },
 
   onSelectedCategoryChange(e) {
@@ -498,6 +571,32 @@ Page({
   getCategoryIcon(category) {
     const categories = app.globalData.foodCategories
     return (categories[category] || categories['其他']).icon
+  },
+
+  getLocationText(location) {
+    return LOCATION_LABELS[location] || '冷藏'
+  },
+
+  async fillManualShelfLife() {
+    const name = this.data.formData.name.trim()
+    if (!name) {
+      return
+    }
+    try {
+      const ref = await api.food.getShelfLifeReference(name, this.data.formData.category)
+      if (ref.success && ref.data.length > 0) {
+        const shelfRef = ref.data[0]
+        const profile = buildShelfProfile(shelfRef)
+        const shelfLife = getShelfLifeByLocation(profile, this.data.formData.location)
+        this.setData({
+          'formData.shelf_life_days': shelfLife ? String(shelfLife) : this.data.formData.shelf_life_days,
+          autoShelfLife: shelfLife || null,
+          storageSuggestion: `${LOCATION_LABELS[shelfRef.recommended_location] || '冷藏'} · ${shelfRef.storage_tip || '按当前保存方式自动计算保质期'}`,
+        })
+      }
+    } catch (err) {
+      console.error('查询手动保质期失败:', err)
+    }
   },
 
   async uploadItemImage(item) {

@@ -82,3 +82,5 @@ class ShelfLifeReference(BaseModel):
     fridge_days: int
     freezer_days: int
     room_temp_days: int
+    recommended_location: str = "fridge"
+    storage_tip: Optional[str] = None

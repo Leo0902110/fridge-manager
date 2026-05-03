@@ -120,6 +120,10 @@
             <text class="selected-meta">{{item.shelf_life_days || '--'}} 天</text>
             <text class="selected-image-chip {{item.imagePath ? 'done' : ''}}">{{item.imagePath ? '局部图' : '原图'}}</text>
           </view>
+          <view class="selected-meta-row" wx:if="{{item.recommended_location || item.storage_tip}}">
+            <text class="selected-storage-chip">建议{{getLocationText(item.recommended_location)}}</text>
+            <text class="selected-storage-tip">{{item.storage_tip}}</text>
+          </view>
         </view>
         <view class="selected-actions">
           <button class="mini-icon-btn danger" catchtap="removeSelectedItem" data-index="{{index}}" disabled="{{submitting}}">×</button>
@@ -191,6 +195,14 @@
             <text>常温</text>
           </view>
         </view>
+        <view class="storage-advice" wx:if="{{selectedItems.length > 0}}">
+          <text class="storage-advice-title">保质期会按当前存放位置自动切换</text>
+          <text class="storage-advice-text">已选食物会优先使用各自的推荐方式和参考天数。</text>
+        </view>
+        <view class="storage-advice" wx:elif="{{storageSuggestion}}">
+          <text class="storage-advice-title">推荐保存</text>
+          <text class="storage-advice-text">{{storageSuggestion}}</text>
+        </view>
       </view>
 
       <view class="field-row" wx:if="{{selectedItems.length === 0}}">
@@ -261,6 +273,7 @@
         <view class="editor-preview-main">
           <text class="editor-preview-title">{{editDraft.imagePath ? '已使用裁剪图' : '当前使用原图'}}</text>
           <text class="editor-preview-caption">默认可直接用原图；需要更准确时再裁剪。</text>
+          <text class="editor-preview-caption" wx:if="{{editDraft.storage_tip}}">建议{{getLocationText(editDraft.recommended_location)}}：{{editDraft.storage_tip}}</text>
           <button class="mini-btn editor-crop-btn" bindtap="cropEditingImage" disabled="{{submitting || !imagePath}}">调整图片区域</button>
         </view>
       </view>

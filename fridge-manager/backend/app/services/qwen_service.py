@@ -89,9 +89,9 @@ class QwenService:
 {
   "mode": "whole 或 split",
   "reason": "为什么这样入库，15字以内",
-  "whole_food": {"name": "整份食物名称", "category": "类别（熟食/剩菜/主食/其他）", "confidence": 置信度 0-100, "shelf_life_days": 冷藏建议天数},
+  "whole_food": {"name": "整份食物名称", "category": "类别（熟食/剩菜/主食/其他）", "confidence": 置信度 0-100, "shelf_life_days": 冷藏建议天数, "recommended_location": "fridge/freezer/room", "storage_tip": "保存建议，20字以内"},
   "foods": [
-    {"name": "可拆分食物名称", "category": "类别（蔬菜/水果/肉类/海鲜/蛋类/乳制品/豆制品/主食/熟食/剩菜/其他）", "confidence": 置信度 0-100, "shelf_life_days": 冷藏建议天数}
+    {"name": "可拆分食物名称", "category": "类别（蔬菜/水果/肉类/海鲜/蛋类/乳制品/豆制品/主食/熟食/剩菜/其他）", "confidence": 置信度 0-100, "shelf_life_days": 冷藏建议天数, "recommended_location": "fridge/freezer/room", "storage_tip": "保存建议，20字以内"}
   ]
 }
 命名要符合库存管理，而不是菜谱拆料。例如一盘牛排、面、蛋和蔬菜应命名为“牛排面套餐”或“熟食餐盘”；一盒剩饭剩菜命名为“剩菜便当”。只返回 JSON，不要其他文字。如果无法识别，mode 返回 "split"，foods 返回空数组。'''}
@@ -127,6 +127,8 @@ class QwenService:
                             food['confidence'] = 80.0
                         if 'shelf_life_days' in food and food['shelf_life_days'] is not None:
                             food['shelf_life_days'] = int(food['shelf_life_days'])
+                        if food.get('recommended_location') not in ('fridge', 'freezer', 'room'):
+                            food['recommended_location'] = 'fridge'
 
                     if whole_food:
                         if 'confidence' in whole_food:
@@ -137,6 +139,8 @@ class QwenService:
                             whole_food['category'] = '熟食'
                         if 'shelf_life_days' in whole_food and whole_food['shelf_life_days'] is not None:
                             whole_food['shelf_life_days'] = int(whole_food['shelf_life_days'])
+                        if whole_food.get('recommended_location') not in ('fridge', 'freezer', 'room'):
+                            whole_food['recommended_location'] = 'fridge'
                     
                     return {
                         "mode": mode,

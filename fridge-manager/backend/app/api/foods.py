@@ -36,6 +36,69 @@ async def determine_status(expiry_date: date, today: date) -> FoodStatus:
     return FoodStatus.FRESH
 
 
+def days_for_location(ref: aiosqlite.Row, location: str) -> int:
+    """根据保存位置选择参考保质期。0 表示不推荐该保存方式，回退到冷藏。"""
+    if location == "freezer":
+        days = ref["freezer_days"]
+    elif location == "room":
+        days = ref["room_temp_days"]
+    else:
+        days = ref["fridge_days"]
+    return days or ref["fridge_days"] or ref["freezer_days"] or ref["room_temp_days"] or 1
+
+
+async def find_shelf_life_reference(
+    db: aiosqlite.Connection,
+    food_name: str,
+    category: Optional[str] = None,
+) -> Optional[aiosqlite.Row]:
+    """优先按名称精确/模糊匹配，再按类别给一个保守默认。"""
+    cursor = await db.execute(
+        "SELECT * FROM shelf_life_reference WHERE food_name = ?",
+        (food_name,)
+    )
+    ref = await cursor.fetchone()
+    if ref:
+        return ref
+
+    cursor = await db.execute(
+        """
+        SELECT *
+        FROM shelf_life_reference
+        WHERE ? LIKE '%' || food_name || '%' OR food_name LIKE '%' || ? || '%'
+        ORDER BY LENGTH(food_name) DESC
+        LIMIT 1
+        """,
+        (food_name, food_name)
+    )
+    ref = await cursor.fetchone()
+    if ref:
+        return ref
+
+    if category:
+        category_defaults = {
+            "熟食": "熟食餐盘",
+            "剩菜": "剩菜",
+            "肉类": "猪肉",
+            "海鲜": "鱼",
+            "蛋类": "鸡蛋",
+            "乳制品": "牛奶",
+            "豆制品": "豆腐",
+            "主食": "米饭",
+            "蔬菜": "白菜",
+            "水果": "苹果",
+        }
+        default_name = category_defaults.get(category)
+        if default_name:
+            cursor = await db.execute(
+                "SELECT * FROM shelf_life_reference WHERE food_name = ?",
+                (default_name,)
+            )
+            return await cursor.fetchone()
+
+    return None
+
+
 @router.get("", response_model=FoodListResponse)
 async def list_foods(
     status: Optional[str] = None,
@@ -97,18 +160,9 @@ async def create_food(
     # 如果没有指定期限，查询参考表
     shelf_life_days = food.shelf_life_days
     if not shelf_life_days:
-        cursor = await db.execute(
-            "SELECT fridge_days, freezer_days, room_temp_days FROM shelf_life_reference WHERE food_name = ?",
-            (food.name,)
-        )
-        ref = await cursor.fetchone()
+        ref = await find_shelf_life_reference(db, food.name, food.category)
         if ref:
-            if food.location == "fridge":
-                shelf_life_days = ref["fridge_days"]
-            elif food.location == "freezer":
-                shelf_life_days = ref["freezer_days"]
-            else:
-                shelf_life_days = ref["room_temp_days"]
+            shelf_life_days = days_for_location(ref, food.location.value)
         else:
             # 默认 7 天
             shelf_life_days = 7
@@ -275,18 +329,22 @@ async def get_overview(
 @router.get("/reference/shelf-life")
 async def get_shelf_life_reference(
     food_name: Optional[str] = None,
+    category: Optional[str] = None,
     db: aiosqlite.Connection = Depends(get_db),
 ):
     """获取保质期参考数据"""
     if food_name:
+        ref = await find_shelf_life_reference(db, food_name, category)
+        rows = [ref] if ref else []
+    elif category:
         cursor = await db.execute(
-            "SELECT * FROM shelf_life_reference WHERE food_name LIKE ?",
-            (f"%{food_name}%",)
+            "SELECT * FROM shelf_life_reference WHERE category = ? ORDER BY food_name",
+            (category,)
         )
+        rows = await cursor.fetchall()
     else:
         cursor = await db.execute("SELECT * FROM shelf_life_reference")
-    
-    rows = await cursor.fetchall()
+        rows = await cursor.fetchall()
     
     return {
         "success": True,

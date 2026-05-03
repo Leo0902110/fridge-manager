@@ -120,9 +120,9 @@ const foodAPI = {
   },
   
   // 获取保质期参考
-  getShelfLifeReference(foodName) {
+  getShelfLifeReference(foodName, category) {
     return request('/foods/reference/shelf-life', {
-      data: { food_name: foodName },
+      data: { food_name: foodName, category },
     })
   },
 }

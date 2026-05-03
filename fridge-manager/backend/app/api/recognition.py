@@ -27,6 +27,8 @@ class RecognitionResult(BaseModel):
     category: Optional[str] = None
     reason: Optional[str] = None
     shelf_life_days: Optional[int] = None
+    recommended_location: Optional[str] = None
+    storage_tip: Optional[str] = None
 
 
 class RecognitionResponse(BaseModel):
@@ -87,6 +89,8 @@ async def recognize_food_image(image: UploadFile = File(...)):
                             confidence=f.get('confidence', 80.0),
                             category=f.get('category', '其他'),
                             shelf_life_days=f.get('shelf_life_days'),
+                            recommended_location=f.get('recommended_location'),
+                            storage_tip=f.get('storage_tip'),
                         )
                         for f in foods
                     ]
@@ -97,6 +101,8 @@ async def recognize_food_image(image: UploadFile = File(...)):
                             confidence=whole_food.get('confidence', 80.0),
                             category=whole_food.get('category', '熟食'),
                             shelf_life_days=whole_food.get('shelf_life_days', 2),
+                            recommended_location=whole_food.get('recommended_location', 'fridge'),
+                            storage_tip=whole_food.get('storage_tip'),
                         )
                     
                     return RecognitionResponse(
