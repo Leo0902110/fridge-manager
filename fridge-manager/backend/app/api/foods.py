@@ -257,6 +257,20 @@ async def update_food(
     if food_update.location is not None:
         updates.append("location = ?")
         params.append(food_update.location.value)
+    if food_update.shelf_life_days is not None:
+        updates.append("shelf_life_days = ?")
+        params.append(food_update.shelf_life_days)
+        put_date = date.fromisoformat(str(row["put_date"]))
+        expiry_date = await calculate_expiry_date(
+            put_date,
+            food_update.shelf_life_days,
+            food_update.location.value if food_update.location else row["location"],
+        )
+        status = await determine_status(expiry_date, date.today())
+        updates.append("expiry_date = ?")
+        params.append(expiry_date.isoformat())
+        updates.append("status = ?")
+        params.append(status.value)
     
     updates.append("updated_at = CURRENT_TIMESTAMP")
     params.append(food_id)

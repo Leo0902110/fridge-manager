@@ -338,4 +338,61 @@
       </view>
     </view>
   </view>
+
+  <view class="decision-overlay" wx:if="{{decisionVisible}}" catchtap="closeDecisionSheet">
+    <view class="decision-sheet" catchtap="noop">
+      <view class="editor-handle"></view>
+      <view class="decision-header">
+        <view>
+          <text class="decision-kicker">{{decisionSource === 'whole' ? '看起来是一份熟食' : '智能入库建议'}}</text>
+          <text class="decision-title">{{decisionItem.name}}</text>
+          <text class="decision-subtitle">{{decisionItem.category}} · 建议{{getLocationText(decisionItem.recommended_location)}}</text>
+        </view>
+        <button class="decision-info-btn" bindtap="toggleDecisionInfo">i</button>
+      </view>
+
+      <image class="decision-image" wx:if="{{imagePath && decisionSource !== 'manual'}}" src="{{imagePath}}" mode="aspectFill" />
+
+      <view class="decision-toggle">
+        <view
+          class="decision-option {{decisionItem.location === 'fridge' ? 'active' : ''}}"
+          bindtap="selectDecisionLocation"
+          data-location="fridge"
+        >
+          <text class="decision-option-main">🧊 冷藏</text>
+          <text class="decision-option-sub">{{decisionItem.shelfProfile.fridge || decisionItem.shelf_life_days || '--'}}天</text>
+        </view>
+        <view
+          class="decision-option {{decisionItem.location === 'freezer' ? 'active' : ''}}"
+          bindtap="selectDecisionLocation"
+          data-location="freezer"
+        >
+          <text class="decision-option-main">❄️ 冷冻</text>
+          <text class="decision-option-sub">{{decisionItem.shelfProfile.freezer || '--'}}天</text>
+        </view>
+        <view
+          class="decision-option {{decisionItem.location === 'room' ? 'active' : ''}}"
+          bindtap="selectDecisionLocation"
+          data-location="room"
+        >
+          <text class="decision-option-main">🌡️ 常温</text>
+          <text class="decision-option-sub">{{decisionItem.shelfProfile.room || '--'}}天</text>
+        </view>
+      </view>
+
+      <view class="decision-expiry">
+        <text class="decision-expiry-label">预计到期日</text>
+        <text class="decision-expiry-date">{{decisionItem.expiryPreview || '待确认'}}</text>
+      </view>
+
+      <view class="decision-explain" wx:if="{{decisionInfoOpen}}">
+        <text>{{decisionItem.storage_tip || '参考食物类别和当前保存位置计算。'}}</text>
+      </view>
+
+      <button class="btn btn-primary decision-primary" bindtap="confirmDecision">
+        {{decisionSource === 'whole' ? '整份入库' : '按推荐确认'}}
+      </button>
+      <button class="decision-secondary" wx:if="{{wholeItem}}" bindtap="switchEntryMode" data-mode="split">我要拆分成单独食材</button>
+    </view>
+  </view>
 </view>

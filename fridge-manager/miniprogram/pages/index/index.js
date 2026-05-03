@@ -50,6 +50,10 @@ function getCountdownInfo(expiryDate) {
   }
 }
 
+function isCookedFood(food) {
+  return ['熟食', '剩菜'].includes(food.category)
+}
+
 Page({
   data: {
     stats: {
@@ -60,6 +64,17 @@ Page({
       warning_foods: [],
     },
     foodList: [],
+    actionFoods: [],
+    expiredFoods: [],
+    activeColdList: [],
+    freezerList: [],
+    filteredInventory: [],
+    inventoryZone: 'fridge',
+    quickFilter: 'all',
+    undoVisible: false,
+    undoText: '',
+    undoFood: null,
+    touchStartX: 0,
     filter: 'all',
     loading: false,
     refreshing: false,
@@ -124,8 +139,19 @@ Page({
             return a.days - b.days
           })
 
+        const expiredFoods = foodList.filter(food => food.riskType === 'expired')
+        const actionFoods = foodList.filter(food => food.riskType === 'warning' || (isCookedFood(food) && food.location === 'fridge'))
+        const activeColdList = foodList.filter(food => food.location !== 'freezer')
+        const freezerList = foodList.filter(food => food.location === 'freezer')
+        const filteredInventory = this.filterInventory(this.data.inventoryZone, this.data.quickFilter, activeColdList, freezerList)
+
         this.setData({
           foodList,
+          actionFoods,
+          expiredFoods,
+          activeColdList,
+          freezerList,
+          filteredInventory,
         })
       }
 
@@ -156,6 +182,96 @@ Page({
     const filter = e.currentTarget.dataset.filter
     this.setData({ filter })
     this.loadData({ refresh: false })
+  },
+
+  setInventoryZone(e) {
+    const inventoryZone = e.currentTarget.dataset.zone
+    this.setData({
+      inventoryZone,
+      filteredInventory: this.filterInventory(inventoryZone, this.data.quickFilter),
+    })
+  },
+
+  setQuickFilter(e) {
+    const quickFilter = e.currentTarget.dataset.filter
+    this.setData({
+      quickFilter,
+      filteredInventory: this.filterInventory(this.data.inventoryZone, quickFilter),
+    })
+  },
+
+  filterInventory(zone, quickFilter, activeColdList = this.data.activeColdList, freezerList = this.data.freezerList) {
+    const source = zone === 'freezer' ? freezerList : activeColdList
+    if (quickFilter === 'all') {
+      return source
+    }
+    if (quickFilter === 'warning') {
+      return source.filter(food => food.riskType === 'warning' || food.riskType === 'expired')
+    }
+    return source.filter(food => food.category === quickFilter)
+  },
+
+  onActionTouchStart(e) {
+    this.setData({
+      touchStartX: e.changedTouches[0].clientX,
+    })
+  },
+
+  onActionTouchEnd(e) {
+    const deltaX = e.changedTouches[0].clientX - this.data.touchStartX
+    const id = e.currentTarget.dataset.id
+    if (deltaX > 80) {
+      this.completeFood(id, 'eat')
+    } else if (deltaX < -80) {
+      this.completeFood(id, 'discard')
+    }
+  },
+
+  async completeFood(id, type) {
+    const food = this.data.foodList.find(item => Number(item.id) === Number(id))
+    if (!food) {
+      return
+    }
+
+    try {
+      await api.food.delete(id)
+      const verb = type === 'discard' ? '丢弃' : '吃完'
+      this.setData({
+        undoVisible: true,
+        undoText: `已记录${verb}${food.name}`,
+        undoFood: food,
+      })
+      clearTimeout(this.undoTimer)
+      this.undoTimer = setTimeout(() => {
+        this.setData({ undoVisible: false, undoFood: null })
+      }, 3000)
+      this.loadData()
+    } catch (err) {
+      wx.showToast({ title: err.message || '操作失败', icon: 'none' })
+    }
+  },
+
+  async undoLastAction() {
+    const food = this.data.undoFood
+    if (!food) {
+      return
+    }
+    clearTimeout(this.undoTimer)
+    try {
+      await api.food.create({
+        name: food.name,
+        category: food.category,
+        image_url: food.image_url,
+        put_date: food.put_date,
+        location: food.location,
+        shelf_life_days: food.shelf_life_days,
+        notes: food.notes || '',
+      })
+      this.setData({ undoVisible: false, undoFood: null })
+      this.loadData()
+    } catch (err) {
+      wx.showToast({ title: err.message || '撤销失败', icon: 'none' })
+    }
   },
 
   /**

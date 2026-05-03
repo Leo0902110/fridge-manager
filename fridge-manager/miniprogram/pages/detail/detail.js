@@ -6,6 +6,8 @@ Page({
   data: {
     foodId: null,
     food: null,
+    shelfProfile: null,
+    storageTip: '',
     daysResult: { text: '', type: 'fresh' },
     loading: true,
     actingType: '',
@@ -37,6 +39,7 @@ Page({
         const food = res.data
         const daysResult = app.calcDaysLeft(food.expiry_date)
         this.setData({ food, daysResult })
+        this.loadShelfProfile(food)
       }
     } catch (err) {
       console.error('加载失败:', err)
@@ -73,6 +76,67 @@ Page({
     return map[location] || location
   },
 
+  getLocationDays(location) {
+    const profile = this.data.shelfProfile
+    if (!profile) {
+      return '--'
+    }
+    return profile[location] || '--'
+  },
+
+  async loadShelfProfile(food) {
+    try {
+      const ref = await api.food.getShelfLifeReference(food.name, food.category)
+      if (ref.success && ref.data.length > 0) {
+        const shelfRef = ref.data[0]
+        this.setData({
+          shelfProfile: {
+            fridge: shelfRef.fridge_days || 0,
+            freezer: shelfRef.freezer_days || 0,
+            room: shelfRef.room_temp_days || 0,
+          },
+          storageTip: shelfRef.storage_tip || '',
+        })
+      }
+    } catch (err) {
+      console.error('加载保存建议失败:', err)
+    }
+  },
+
+  async changeLocation(e) {
+    if (this.data.actingType || this.data.loading || !this.data.food) {
+      return
+    }
+
+    const location = e.currentTarget.dataset.location
+    const shelfLife = this.getLocationDays(location)
+    if (!shelfLife || shelfLife === '--') {
+      wx.showToast({ title: '不推荐这种保存方式', icon: 'none' })
+      return
+    }
+
+    this.setData({ actingType: 'update' })
+    wx.showNavigationBarLoading()
+    try {
+      const res = await api.food.update(this.data.foodId, {
+        location,
+        shelf_life_days: Number(shelfLife),
+      })
+      if (res.success) {
+        const food = res.data
+        this.setData({
+          food,
+          daysResult: app.calcDaysLeft(food.expiry_date),
+        })
+      }
+    } catch (err) {
+      wx.showToast({ title: err.message || '更新失败', icon: 'none' })
+    } finally {
+      this.setData({ actingType: '' })
+      wx.hideNavigationBarLoading()
+    }
+  },
+
   /**
    * 编辑食物
    */
@@ -81,10 +145,7 @@ Page({
       return
     }
 
-    wx.showToast({
-      title: '编辑功能开发中',
-      icon: 'none',
-    })
+    wx.showToast({ title: '可直接切换保存方式', icon: 'none' })
   },
 
   /**

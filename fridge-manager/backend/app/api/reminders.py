@@ -14,6 +14,55 @@ from app.db.database import get_db
 router = APIRouter()
 
 
+def days_until(expiry_date) -> int:
+    if isinstance(expiry_date, str):
+      expiry_date = date.fromisoformat(expiry_date)
+    return (expiry_date - date.today()).days
+
+
+def build_reminder_policy(food) -> dict:
+    """按类别和保存方式生成动态提醒策略。"""
+    name = food["name"]
+    category = food["category"] or "其他"
+    location = food["location"]
+    days_left = days_until(food["expiry_date"])
+    location_text = {"fridge": "冷藏", "freezer": "冷冻", "room": "常温"}.get(location, "")
+
+    if days_left < 0:
+        return {
+            "level": "expired",
+            "remind_date": date.today(),
+            "message": f"⚠️ 警报：【{name}】已过期，为了健康请及时清理并记录。",
+        }
+
+    if category in ("熟食", "剩菜") and location == "fridge":
+        return {
+            "level": "eat-tonight",
+            "remind_date": date.today() + timedelta(days=1),
+            "message": f"昨天的【{name}】还在冰箱，建议今晚解决掉哦！",
+        }
+
+    if category in ("肉类", "海鲜") and location == "fridge":
+        return {
+            "level": "cook-soon",
+            "remind_date": date.today() + timedelta(days=2),
+            "message": f"【{location_text}{name}】明天就临期了，今晚要不要安排一下？",
+        }
+
+    if category in ("水果", "蔬菜"):
+        return {
+            "level": "best-taste",
+            "remind_date": max(date.today(), date.fromisoformat(str(food["expiry_date"])) - timedelta(days=1)),
+            "message": f"您的【{name}】快不新鲜啦，赶快吃掉享受最佳口感。",
+        }
+
+    return {
+        "level": "default",
+        "remind_date": max(date.today(), date.fromisoformat(str(food["expiry_date"])) - timedelta(days=1)),
+        "message": f"【{name}】快到期了，请尽快处理。",
+    }
+
+
 class ReminderCreate(BaseModel):
     """创建提醒"""
     food_id: int
@@ -70,9 +119,8 @@ async def check_and_create_expiry_reminders(
     # 查找 3 天内过期的食物
     cursor = await db.execute("""
         SELECT * FROM foods
-        WHERE expiry_date BETWEEN ? AND ?
-        AND status != 'expired'
-    """, (today.isoformat(), warning_date.isoformat()))
+        WHERE expiry_date <= ?
+    """, (warning_date.isoformat(),))
     
     foods = await cursor.fetchall()
     created_count = 0
@@ -86,14 +134,12 @@ async def check_and_create_expiry_reminders(
         existing = await cursor.fetchone()
         
         if not existing:
-            # 创建提醒
-            days_left = (food["expiry_date"] - today).days
-            message = f"⚠️ {food['name']} 还有 {days_left} 天过期，请尽快食用！"
+            policy = build_reminder_policy(food)
             
             await db.execute("""
                 INSERT INTO reminders (food_id, remind_date, message)
                 VALUES (?, ?, ?)
-            """, (food["id"], today.isoformat(), message))
+            """, (food["id"], policy["remind_date"].isoformat(), policy["message"]))
             created_count += 1
     
     await db.commit()
@@ -105,6 +151,32 @@ async def check_and_create_expiry_reminders(
             "created_count": created_count,
             "warning_foods": [dict(f) for f in foods],
         },
+    }
+
+
+@router.get("/strategy")
+async def get_reminder_strategy(
+    db: aiosqlite.Connection = Depends(get_db),
+):
+    """预览当前库存的动态管家提醒策略。"""
+    cursor = await db.execute("SELECT * FROM foods ORDER BY expiry_date ASC")
+    foods = await cursor.fetchall()
+    strategies = []
+    for food in foods:
+        policy = build_reminder_policy(food)
+        strategies.append({
+            "food_id": food["id"],
+            "food_name": food["name"],
+            "category": food["category"],
+            "location": food["location"],
+            "expiry_date": food["expiry_date"],
+            **policy,
+        })
+
+    return {
+        "success": True,
+        "data": strategies,
+        "count": len(strategies),
     }
 
 

@@ -43,6 +43,7 @@ class FoodUpdate(BaseModel):
     status: Optional[FoodStatus] = None
     notes: Optional[str] = None
     location: Optional[FoodLocation] = None
+    shelf_life_days: Optional[int] = None
 
 
 class Food(FoodBase):

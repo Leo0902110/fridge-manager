@@ -58,6 +58,43 @@
     </view>
   </view>
 
+  <view class="action-dashboard card">
+    <view class="section-header action-header">
+      <text class="section-title">今日行动</text>
+      <text class="section-hint">{{actionFoods.length + expiredFoods.length}} 项</text>
+    </view>
+
+    <view class="expired-alert" wx:if="{{expiredFoods.length > 0}}">
+      <text class="expired-alert-title">⚠️ 已过期：请检查并清理 {{expiredFoods.length}} 项</text>
+    </view>
+
+    <view wx:if="{{actionFoods.length > 0}}">
+      <view
+        class="action-card action-{{item.riskType}}"
+        wx:for="{{actionFoods}}"
+        wx:key="id"
+        bindtap="goToDetail"
+        bindtouchstart="onActionTouchStart"
+        bindtouchend="onActionTouchEnd"
+        data-id="{{item.id}}"
+      >
+        <view class="action-main">
+          <text class="action-icon">{{getCategoryIcon(item.category)}}</text>
+          <view class="list-main">
+            <text class="list-title">{{item.name}}</text>
+            <text class="list-subtitle">{{item.countdownText}} · 右滑吃完，左滑丢弃</text>
+          </view>
+        </view>
+        <text class="countdown-chip">{{item.badgeText}}</text>
+      </view>
+    </view>
+
+    <view class="zero-waste" wx:if="{{actionFoods.length === 0 && expiredFoods.length === 0}}">
+      <text class="zero-waste-title">🎉 今日零浪费达成</text>
+      <text class="zero-waste-text">冰箱状态极佳，继续保持。</text>
+    </view>
+  </view>
+
   <view class="section-block" wx:if="{{stats.warning_foods.length > 0}}">
     <view class="section-header">
       <text class="section-title">临期提醒</text>
@@ -86,27 +123,39 @@
 
   <view class="section-header inventory-header">
     <view>
-      <text class="section-title">库存倒计时</text>
-      <text class="section-hint inventory-hint">已过期、临期、健康从上到下排列</text>
+      <text class="section-title">库存分区</text>
+      <text class="section-hint inventory-hint">冷藏关注当下，冷冻默认收纳长期储备</text>
     </view>
     <view class="segmented-control">
       <text
-        class="segment-item {{filter === 'all' ? 'active' : ''}}"
-        bindtap="setFilter"
-        data-filter="all"
-      >全部</text>
+        class="segment-item {{inventoryZone === 'fridge' ? 'active' : ''}}"
+        bindtap="setInventoryZone"
+        data-zone="fridge"
+      >冷藏</text>
       <text
-        class="segment-item {{filter === 'warning' ? 'active' : ''}}"
-        bindtap="setFilter"
-        data-filter="warning"
-      >临期</text>
+        class="segment-item {{inventoryZone === 'freezer' ? 'active' : ''}}"
+        bindtap="setInventoryZone"
+        data-zone="freezer"
+      >冷冻</text>
     </view>
   </view>
 
-  <view class="risk-list" wx:if="{{foodList.length > 0}}">
+  <scroll-view class="quick-filter-scroll" scroll-x wx:if="{{foodList.length > 0}}">
+    <view class="quick-filter-row">
+      <text class="quick-chip {{quickFilter === 'all' ? 'active' : ''}}" bindtap="setQuickFilter" data-filter="all">全部</text>
+      <text class="quick-chip {{quickFilter === 'warning' ? 'active' : ''}}" bindtap="setQuickFilter" data-filter="warning">即将过期</text>
+      <text class="quick-chip {{quickFilter === '肉类' ? 'active' : ''}}" bindtap="setQuickFilter" data-filter="肉类">肉类</text>
+      <text class="quick-chip {{quickFilter === '水果' ? 'active' : ''}}" bindtap="setQuickFilter" data-filter="水果">水果</text>
+      <text class="quick-chip {{quickFilter === '蔬菜' ? 'active' : ''}}" bindtap="setQuickFilter" data-filter="蔬菜">蔬菜</text>
+      <text class="quick-chip {{quickFilter === '熟食' ? 'active' : ''}}" bindtap="setQuickFilter" data-filter="熟食">熟食</text>
+      <text class="quick-chip {{quickFilter === '乳制品' ? 'active' : ''}}" bindtap="setQuickFilter" data-filter="乳制品">饮品</text>
+    </view>
+  </scroll-view>
+
+  <view class="risk-list" wx:if="{{filteredInventory.length > 0}}">
     <view
       class="risk-food-card risk-{{item.riskType}}"
-      wx:for="{{foodList}}"
+      wx:for="{{filteredInventory}}"
       wx:key="id"
       bindtap="goToDetail"
       data-id="{{item.id}}"
@@ -138,4 +187,9 @@
     <button class="btn btn-primary empty-btn" bindtap="goToAdd">添加食物</button>
   </view>
   </block>
+
+  <view class="undo-snackbar" wx:if="{{undoVisible}}">
+    <text>{{undoText}}</text>
+    <button class="undo-btn" bindtap="undoLastAction">撤销</button>
+  </view>
 </view>

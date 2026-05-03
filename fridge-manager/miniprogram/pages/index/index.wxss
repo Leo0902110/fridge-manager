@@ -171,6 +171,87 @@
   margin-bottom: 16rpx;
 }
 
+.action-dashboard {
+  padding: 28rpx;
+  background: #FFFFFF;
+}
+
+.action-header {
+  padding: 0;
+}
+
+.expired-alert {
+  margin-bottom: 16rpx;
+  padding: 18rpx 20rpx;
+  border-radius: 18rpx;
+  background: #FFF1F1;
+  color: #B42318;
+}
+
+.expired-alert-title {
+  font-size: 26rpx;
+  font-weight: 750;
+}
+
+.action-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 112rpx;
+  margin-bottom: 14rpx;
+  padding: 18rpx 20rpx;
+  border-radius: 22rpx;
+  background: #F8FAFC;
+  border: 1rpx solid rgba(60, 60, 67, 0.08);
+  box-sizing: border-box;
+}
+
+.action-card:active {
+  transform: scale(0.99);
+  opacity: 0.86;
+}
+
+.action-warning {
+  background: #FFF8EA;
+}
+
+.action-expired {
+  background: #FFF1F1;
+}
+
+.action-main {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+
+.action-icon {
+  flex-shrink: 0;
+  margin-right: 16rpx;
+  font-size: 42rpx;
+}
+
+.zero-waste {
+  padding: 22rpx;
+  border-radius: 20rpx;
+  background: #F2F8F5;
+}
+
+.zero-waste-title {
+  display: block;
+  margin-bottom: 8rpx;
+  font-size: 30rpx;
+  font-weight: 800;
+  color: #1F7A3B;
+}
+
+.zero-waste-text {
+  display: block;
+  font-size: 24rpx;
+  color: var(--text-secondary);
+}
+
 .section-header {
   display: flex;
   justify-content: space-between;
@@ -207,6 +288,35 @@
   padding: 4rpx;
   background: #E8E8ED;
   border-radius: 16rpx;
+}
+
+.quick-filter-scroll {
+  margin: -4rpx 0 22rpx;
+  white-space: nowrap;
+}
+
+.quick-filter-row {
+  display: flex;
+  padding: 0 8rpx;
+}
+
+.quick-chip {
+  display: inline-flex;
+  flex-shrink: 0;
+  margin-right: 12rpx;
+  padding: 12rpx 22rpx;
+  border-radius: 999rpx;
+  background: #FFFFFF;
+  color: var(--text-secondary);
+  font-size: 24rpx;
+  font-weight: 650;
+  border: 1rpx solid rgba(60, 60, 67, 0.08);
+}
+
+.quick-chip.active {
+  background: #EAF3FF;
+  color: var(--primary-color);
+  border-color: rgba(0, 122, 255, 0.22);
 }
 
 .segment-item {
@@ -413,6 +523,36 @@
 
 .empty-btn {
   width: 260rpx;
+}
+
+.undo-snackbar {
+  position: fixed;
+  left: 28rpx;
+  right: 28rpx;
+  bottom: calc(env(safe-area-inset-bottom) + 148rpx);
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 84rpx;
+  padding: 0 18rpx 0 24rpx;
+  border-radius: 20rpx;
+  background: rgba(17, 24, 39, 0.94);
+  color: #FFFFFF;
+  font-size: 26rpx;
+  box-shadow: 0 14rpx 34rpx rgba(17, 24, 39, 0.22);
+}
+
+.undo-btn {
+  width: 108rpx;
+  height: 58rpx;
+  margin-left: 18rpx;
+  padding: 0;
+  border-radius: 16rpx;
+  background: rgba(255, 255, 255, 0.16);
+  color: #FFFFFF;
+  font-size: 24rpx;
+  line-height: 58rpx;
 }
 
 @keyframes shimmer {

@@ -56,6 +56,28 @@
   <view class="section-header detail-section-header">
     <text class="section-title">基本信息</text>
   </view>
+  <view class="card location-recalc-card">
+    <view class="section-header location-recalc-header">
+      <text class="section-title">保存方式</text>
+      <text class="section-hint">切换后自动重算到期日</text>
+    </view>
+    <view class="location-options">
+      <view class="location-option {{food.location === 'fridge' ? 'active' : ''}}" bindtap="changeLocation" data-location="fridge">
+        <text class="location-option-title">🧊 冷藏</text>
+        <text class="location-option-days">{{getLocationDays('fridge')}}天</text>
+      </view>
+      <view class="location-option {{food.location === 'freezer' ? 'active' : ''}}" bindtap="changeLocation" data-location="freezer">
+        <text class="location-option-title">❄️ 冷冻</text>
+        <text class="location-option-days">{{getLocationDays('freezer')}}天</text>
+      </view>
+      <view class="location-option {{food.location === 'room' ? 'active' : ''}}" bindtap="changeLocation" data-location="room">
+        <text class="location-option-title">🌡️ 常温</text>
+        <text class="location-option-days">{{getLocationDays('room')}}天</text>
+      </view>
+    </view>
+    <text class="location-tip" wx:if="{{storageTip}}">{{storageTip}}</text>
+  </view>
+
   <view class="list-group">
     <view class="list-cell">
       <view class="list-main">

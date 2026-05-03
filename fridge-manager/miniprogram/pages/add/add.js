@@ -82,6 +82,14 @@ function getShelfLifeByLocation(profile, location) {
   return profile[location] || profile.fridge || profile.freezer || profile.room || ''
 }
 
+function calcExpiryDate(days) {
+  const date = new Date()
+  date.setDate(date.getDate() + Number(days || 0))
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${date.getFullYear()}-${month}-${day}`
+}
+
 Page({
   data: {
     categories: CATEGORIES,
@@ -95,6 +103,11 @@ Page({
     selectedItems: [],
     selectedCount: 0,
     editorVisible: false,
+    decisionVisible: false,
+    decisionInfoOpen: false,
+    decisionSource: '',
+    decisionIndex: -1,
+    decisionItem: null,
     editingIndex: -1,
     editDraft: null,
 
@@ -108,6 +121,9 @@ Page({
 
     autoShelfLife: null,
     storageSuggestion: '',
+    manualShelfProfile: null,
+    manualRecommendedLocation: '',
+    manualStorageTip: '',
     recognizing: false,
     submitting: false,
   },
@@ -174,6 +190,7 @@ Page({
 
           if (selectedItems.length > 0) {
             await this.fillShelfLifeForSelected()
+            this.openDecisionSheet(shouldUseWhole ? 'whole' : 'item', 0)
           }
         } catch (err) {
           console.error('识别失败:', err)
@@ -219,6 +236,7 @@ Page({
     })
 
     this.fillShelfLifeForSelected()
+    this.openDecisionSheet(mode === 'whole' ? 'whole' : 'item', 0)
   },
 
   toggleResult(e) {
@@ -301,6 +319,108 @@ Page({
         })
       }
     }
+  },
+
+  buildDecisionItem(item, source) {
+    const profile = item.shelfProfile || (source === 'manual' ? this.data.manualShelfProfile : null) || {}
+    const location = source === 'manual' ? this.data.formData.location : this.data.formData.location
+    const shelfLife = getShelfLifeByLocation(profile, location) || item.shelf_life_days || this.data.formData.shelf_life_days
+    return {
+      ...item,
+      source,
+      shelfProfile: profile,
+      location,
+      shelf_life_days: shelfLife ? String(shelfLife) : '',
+      expiryPreview: shelfLife ? calcExpiryDate(shelfLife) : '',
+      recommended_location: item.recommended_location || this.data.manualRecommendedLocation || getDefaultLocation(item.name, item.category),
+      storage_tip: item.storage_tip || this.data.manualStorageTip || getDefaultStorageTip(item.name, item.category, location),
+    }
+  },
+
+  openDecisionSheet(source, index = -1) {
+    if (this.data.submitting || this.data.recognizing) {
+      return
+    }
+
+    const item = source === 'manual'
+      ? {
+          name: this.data.formData.name,
+          category: this.data.formData.category || CATEGORIES[this.data.categoryIndex] || '其他',
+          shelf_life_days: this.data.formData.shelf_life_days,
+          shelfProfile: this.data.manualShelfProfile,
+          recommended_location: this.data.manualRecommendedLocation,
+          storage_tip: this.data.manualStorageTip,
+        }
+      : this.data.selectedItems[index]
+
+    if (!item || !item.name) {
+      return
+    }
+
+    this.setData({
+      decisionVisible: true,
+      decisionInfoOpen: false,
+      decisionSource: source,
+      decisionIndex: index,
+      decisionItem: this.buildDecisionItem(item, source),
+    })
+  },
+
+  closeDecisionSheet() {
+    this.setData({
+      decisionVisible: false,
+      decisionInfoOpen: false,
+      decisionSource: '',
+      decisionIndex: -1,
+      decisionItem: null,
+    })
+  },
+
+  toggleDecisionInfo() {
+    this.setData({
+      decisionInfoOpen: !this.data.decisionInfoOpen,
+    })
+  },
+
+  selectDecisionLocation(e) {
+    const location = e.currentTarget.dataset.location
+    const item = this.data.decisionItem
+    if (!item) {
+      return
+    }
+
+    const shelfLife = getShelfLifeByLocation(item.shelfProfile, location) || item.shelf_life_days
+    this.setData({
+      'decisionItem.location': location,
+      'decisionItem.shelf_life_days': shelfLife ? String(shelfLife) : '',
+      'decisionItem.expiryPreview': shelfLife ? calcExpiryDate(shelfLife) : '',
+    })
+  },
+
+  confirmDecision() {
+    const item = this.data.decisionItem
+    if (!item) {
+      return
+    }
+
+    if (this.data.decisionSource === 'manual') {
+      this.setData({
+        'formData.location': item.location,
+        'formData.shelf_life_days': item.shelf_life_days,
+        storageSuggestion: `${LOCATION_LABELS[item.recommended_location] || '冷藏'} · ${item.storage_tip}`,
+      })
+    } else if (this.data.decisionIndex >= 0) {
+      this.setData({
+        [`selectedItems[${this.data.decisionIndex}].shelf_life_days`]: item.shelf_life_days,
+        [`selectedItems[${this.data.decisionIndex}].recommended_location`]: item.recommended_location,
+        [`selectedItems[${this.data.decisionIndex}].storage_tip`]: item.storage_tip,
+        [`selectedItems[${this.data.decisionIndex}].shelfProfile`]: item.shelfProfile,
+        'formData.location': item.location,
+      })
+      this.applyLocationShelfLife(item.location)
+    }
+
+    this.closeDecisionSheet()
   },
 
   cropSelectedImage(e) {
@@ -614,16 +734,26 @@ Page({
         this.setData({
           'formData.shelf_life_days': shelfLife ? String(shelfLife) : this.data.formData.shelf_life_days,
           autoShelfLife: shelfLife || null,
+          manualShelfProfile: profile,
+          manualRecommendedLocation: shelfRef.recommended_location,
+          manualStorageTip: shelfRef.storage_tip || '',
           storageSuggestion: `${LOCATION_LABELS[shelfRef.recommended_location] || '冷藏'} · ${shelfRef.storage_tip || '按当前保存方式自动计算保质期'}`,
         })
+        this.openDecisionSheet('manual')
       } else {
         const fallbackLocation = getDefaultLocation(name, category)
         const fallbackShelfLife = getDefaultShelfLife(name, category) || (category === '肉类' ? 3 : '')
         this.setData({
           'formData.shelf_life_days': fallbackShelfLife ? String(fallbackShelfLife) : this.data.formData.shelf_life_days,
           autoShelfLife: fallbackShelfLife || null,
+          manualShelfProfile: null,
+          manualRecommendedLocation: fallbackLocation,
+          manualStorageTip: getDefaultStorageTip(name, category, fallbackLocation),
           storageSuggestion: `${LOCATION_LABELS[fallbackLocation] || '冷藏'} · ${getDefaultStorageTip(name, category, fallbackLocation)}`,
         })
+        if (fallbackShelfLife) {
+          this.openDecisionSheet('manual')
+        }
       }
     } catch (err) {
       console.error('查询手动保质期失败:', err)
