@@ -27,7 +27,7 @@ App({
   
   globalData: {
     // API 基础地址（开发时改为你的后端地址）
-    API_BASE_URL: 'http://10.244.4.243:8000/api/v1', // Mac 局域网 IP
+    API_BASE_URL: 'http://192.168.31.107:8000/api/v1', // Mac 局域网 IP
     
     // 用户信息
     userInfo: null,
