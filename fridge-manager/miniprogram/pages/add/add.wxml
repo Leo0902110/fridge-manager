@@ -68,7 +68,7 @@
   <view class="card selected-editor-card" wx:if="{{selectedItems.length > 0}}">
     <view class="section-header form-header">
       <text class="section-title">入库清单</text>
-      <text class="section-hint">点开单项编辑</text>
+      <text class="section-hint">确认后批量入库</text>
     </view>
 
     <scroll-view class="selected-scroll" scroll-y>
@@ -81,6 +81,7 @@
       >
         <view class="selected-thumb">
           <image wx:if="{{item.imagePath}}" class="selected-thumb-image" src="{{item.imagePath}}" mode="aspectFill" />
+          <image wx:elif="{{imagePath}}" class="selected-thumb-image muted" src="{{imagePath}}" mode="aspectFill" />
           <text wx:else class="selected-thumb-icon">{{getCategoryIcon(item.category)}}</text>
         </view>
         <view class="selected-main">
@@ -88,11 +89,16 @@
             <text class="selected-badge">{{index + 1}}</text>
             <text class="selected-title">{{item.name || '待命名'}}</text>
           </view>
-          <text class="selected-meta">{{item.category}} · {{item.shelf_life_days || '--'}} 天 · {{item.imagePath ? '已裁剪' : '未裁剪'}}</text>
+          <view class="selected-meta-row">
+            <text class="selected-meta">{{item.category}}</text>
+            <text class="selected-dot">·</text>
+            <text class="selected-meta">{{item.shelf_life_days || '--'}} 天</text>
+            <text class="selected-image-chip {{item.imagePath ? 'done' : ''}}">{{item.imagePath ? '局部图' : '原图'}}</text>
+          </view>
         </view>
         <view class="selected-actions">
-          <button class="mini-btn" catchtap="cropSelectedImage" data-index="{{index}}" disabled="{{submitting || !imagePath}}">裁剪</button>
           <button class="mini-icon-btn danger" catchtap="removeSelectedItem" data-index="{{index}}" disabled="{{submitting}}">×</button>
+          <text class="selected-chevron">›</text>
         </view>
       </view>
     </scroll-view>
@@ -229,8 +235,8 @@
         </view>
         <view class="editor-preview-main">
           <text class="editor-preview-title">{{editDraft.imagePath ? '已使用裁剪图' : '当前使用原图'}}</text>
-          <text class="editor-preview-caption">裁剪后会和这条食物一一对应。</text>
-          <button class="mini-btn editor-crop-btn" bindtap="cropEditingImage" disabled="{{submitting || !imagePath}}">裁剪对应区域</button>
+          <text class="editor-preview-caption">默认可直接用原图；需要更准确时再裁剪。</text>
+          <button class="mini-btn editor-crop-btn" bindtap="cropEditingImage" disabled="{{submitting || !imagePath}}">调整图片区域</button>
         </view>
       </view>
 
