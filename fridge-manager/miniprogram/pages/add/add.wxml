@@ -1,5 +1,5 @@
 <!--pages/add/add.wxml - 添加食物页面-->
-<view class="container tab-page">
+<view class="container tab-page add-page">
   <text class="large-title">添加</text>
   <view class="page-summary-row">
     <text class="page-subtitle page-subtitle-inline">拍一张照片，或者手动补充信息。</text>
@@ -68,7 +68,7 @@
   <view class="card selected-editor-card" wx:if="{{selectedItems.length > 0}}">
     <view class="section-header form-header">
       <text class="section-title">入库清单</text>
-      <text class="section-hint">逐项确认，可裁剪对应食物</text>
+      <text class="section-hint">点开单项编辑</text>
     </view>
 
     <scroll-view class="selected-scroll" scroll-y>
@@ -76,76 +76,24 @@
         class="selected-item"
         wx:for="{{selectedItems}}"
         wx:key="sourceIndex"
+        bindtap="openItemEditor"
+        data-index="{{index}}"
       >
-        <view class="selected-item-head">
+        <view class="selected-thumb">
+          <image wx:if="{{item.imagePath}}" class="selected-thumb-image" src="{{item.imagePath}}" mode="aspectFill" />
+          <text wx:else class="selected-thumb-icon">{{getCategoryIcon(item.category)}}</text>
+        </view>
+        <view class="selected-main">
           <view class="selected-title-row">
             <text class="selected-badge">{{index + 1}}</text>
             <text class="selected-title">{{item.name || '待命名'}}</text>
           </view>
-          <view class="selected-actions">
-            <button class="mini-btn" bindtap="cropSelectedImage" data-index="{{index}}" disabled="{{submitting || !imagePath}}">{{item.cropStatus}}</button>
-            <button class="mini-btn danger" bindtap="removeSelectedItem" data-index="{{index}}" disabled="{{submitting}}">移除</button>
-          </view>
+          <text class="selected-meta">{{item.category}} · {{item.shelf_life_days || '--'}} 天 · {{item.imagePath ? '已裁剪' : '未裁剪'}}</text>
         </view>
-
-        <view class="selected-grid">
-          <view class="mini-field">
-            <text class="mini-label">名称</text>
-            <input
-              class="mini-control"
-              value="{{item.name}}"
-              bindinput="onSelectedInputChange"
-              data-index="{{index}}"
-              data-field="name"
-              disabled="{{submitting}}"
-            />
-          </view>
-
-          <view class="mini-field">
-            <text class="mini-label">类别</text>
-            <picker
-              mode="selector"
-              range="{{categories}}"
-              value="{{item.categoryIndex}}"
-              bindchange="onSelectedCategoryChange"
-              data-index="{{index}}"
-              disabled="{{submitting}}"
-            >
-              <view class="mini-control mini-picker">
-                <text>{{item.category}}</text>
-                <text class="chevron">›</text>
-              </view>
-            </picker>
-          </view>
-
-          <view class="mini-field">
-            <text class="mini-label">保质期</text>
-            <input
-              class="mini-control"
-              type="number"
-              value="{{item.shelf_life_days}}"
-              bindinput="onSelectedInputChange"
-              data-index="{{index}}"
-              data-field="shelf_life_days"
-              disabled="{{submitting}}"
-            />
-          </view>
-
-          <view class="mini-field">
-            <text class="mini-label">备注</text>
-            <input
-              class="mini-control"
-              value="{{item.notes}}"
-              placeholder="可选"
-              bindinput="onSelectedInputChange"
-              data-index="{{index}}"
-              data-field="notes"
-              disabled="{{submitting}}"
-            />
-          </view>
+        <view class="selected-actions">
+          <button class="mini-btn" catchtap="cropSelectedImage" data-index="{{index}}" disabled="{{submitting || !imagePath}}">裁剪</button>
+          <button class="mini-icon-btn danger" catchtap="removeSelectedItem" data-index="{{index}}" disabled="{{submitting}}">×</button>
         </view>
-
-        <image class="selected-crop-preview" wx:if="{{item.imagePath}}" src="{{item.imagePath}}" mode="aspectFill" />
       </view>
     </scroll-view>
   </view>
@@ -244,8 +192,106 @@
   </view>
 
   <button
+    wx:if="{{selectedItems.length === 0}}"
     class="btn btn-primary submit-btn"
     bindtap="submitFood"
     disabled="{{submitting || recognizing}}"
-  >{{recognizing ? '识别中...' : submitting ? '保存中...' : selectedItems.length > 0 ? '批量保存到冰箱' : '保存到冰箱'}}</button>
+  >{{recognizing ? '识别中...' : submitting ? '保存中...' : '保存到冰箱'}}</button>
+
+  <view class="batch-bar" wx:if="{{selectedItems.length > 0}}">
+    <view class="batch-info">
+      <text class="batch-count">已选 {{selectedItems.length}} 项</text>
+      <text class="batch-caption">可点开单项编辑或裁剪图片</text>
+    </view>
+    <button
+      class="batch-submit"
+      bindtap="submitFood"
+      disabled="{{submitting || recognizing || selectedItems.length === 0}}"
+    >{{submitting ? '保存中' : '批量入库'}}</button>
+  </view>
+
+  <view class="editor-overlay" wx:if="{{editorVisible}}" catchtap="closeItemEditor">
+    <view class="editor-sheet" catchtap="noop">
+      <view class="editor-handle"></view>
+      <view class="editor-header">
+        <view>
+          <text class="editor-title">编辑食物</text>
+          <text class="editor-subtitle">确认名称、保质期和对应图片</text>
+        </view>
+        <button class="mini-icon-btn" bindtap="closeItemEditor">×</button>
+      </view>
+
+      <view class="editor-preview-row">
+        <view class="editor-preview">
+          <image wx:if="{{editDraft.imagePath}}" class="editor-preview-image" src="{{editDraft.imagePath}}" mode="aspectFill" />
+          <image wx:elif="{{imagePath}}" class="editor-preview-image muted" src="{{imagePath}}" mode="aspectFill" />
+          <text wx:else class="selected-thumb-icon">{{getCategoryIcon(editDraft.category)}}</text>
+        </view>
+        <view class="editor-preview-main">
+          <text class="editor-preview-title">{{editDraft.imagePath ? '已使用裁剪图' : '当前使用原图'}}</text>
+          <text class="editor-preview-caption">裁剪后会和这条食物一一对应。</text>
+          <button class="mini-btn editor-crop-btn" bindtap="cropEditingImage" disabled="{{submitting || !imagePath}}">裁剪对应区域</button>
+        </view>
+      </view>
+
+      <view class="field-group editor-fields">
+        <view class="field-row">
+          <text class="field-label">食物名称</text>
+          <input
+            class="field-control"
+            value="{{editDraft.name}}"
+            bindinput="onEditDraftInputChange"
+            data-field="name"
+            disabled="{{submitting}}"
+          />
+        </view>
+
+        <view class="field-row">
+          <text class="field-label">类别</text>
+          <picker
+            mode="selector"
+            range="{{categories}}"
+            value="{{editDraft.categoryIndex}}"
+            bindchange="onEditDraftCategoryChange"
+            disabled="{{submitting}}"
+          >
+            <view class="field-picker picker-display">
+              <text>{{editDraft.category}}</text>
+              <text class="chevron">›</text>
+            </view>
+          </picker>
+        </view>
+
+        <view class="field-row">
+          <text class="field-label">保质期（天）</text>
+          <input
+            class="field-control"
+            type="number"
+            value="{{editDraft.shelf_life_days}}"
+            bindinput="onEditDraftInputChange"
+            data-field="shelf_life_days"
+            disabled="{{submitting}}"
+          />
+        </view>
+
+        <view class="field-row">
+          <text class="field-label">备注</text>
+          <textarea
+            class="field-textarea editor-notes"
+            value="{{editDraft.notes}}"
+            placeholder="可选"
+            bindinput="onEditDraftInputChange"
+            data-field="notes"
+            maxlength="100"
+            disabled="{{submitting}}"
+          />
+        </view>
+      </view>
+
+      <view class="editor-actions">
+        <button class="btn btn-outline editor-action-btn" bindtap="closeItemEditor">取消</button>
+        <button class="btn btn-primary editor-action-btn" bindtap="saveEditingItem">保存</button>
+      </view>
+    </view>
+  </view>
 </view>

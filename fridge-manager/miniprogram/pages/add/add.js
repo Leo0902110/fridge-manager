@@ -33,6 +33,9 @@ Page({
     recognitionResults: [],
     selectedItems: [],
     selectedCount: 0,
+    editorVisible: false,
+    editingIndex: -1,
+    editDraft: null,
 
     formData: {
       name: '',
@@ -54,6 +57,8 @@ Page({
   onShow() {
     this.updateTabBar()
   },
+
+  noop() {},
 
   async chooseImage() {
     if (this.data.recognizing || this.data.submitting) {
@@ -217,6 +222,97 @@ Page({
     })
   },
 
+  cropEditingImage() {
+    if (this.data.submitting || !this.data.imagePath || !this.data.editDraft) {
+      return
+    }
+
+    if (typeof wx.cropImage !== 'function') {
+      wx.showToast({
+        title: '当前微信版本不支持裁剪',
+        icon: 'none',
+      })
+      return
+    }
+
+    wx.cropImage({
+      src: this.data.imagePath,
+      cropScale: '1:1',
+      success: (res) => {
+        this.setData({
+          'editDraft.imagePath': res.tempFilePath,
+          'editDraft.cropStatus': '已裁剪',
+        })
+      },
+      fail: (err) => {
+        if (!String(err.errMsg || '').includes('cancel')) {
+          wx.showToast({
+            title: '裁剪失败',
+            icon: 'none',
+          })
+        }
+      },
+    })
+  },
+
+  openItemEditor(e) {
+    if (this.data.submitting) {
+      return
+    }
+
+    const index = Number(e.currentTarget.dataset.index)
+    const item = this.data.selectedItems[index]
+    if (!item) {
+      return
+    }
+
+    this.setData({
+      editorVisible: true,
+      editingIndex: index,
+      editDraft: { ...item },
+    })
+  },
+
+  closeItemEditor() {
+    if (this.data.submitting) {
+      return
+    }
+
+    this.setData({
+      editorVisible: false,
+      editingIndex: -1,
+      editDraft: null,
+    })
+  },
+
+  saveEditingItem() {
+    const { editingIndex, editDraft } = this.data
+    if (editingIndex < 0 || !editDraft) {
+      return
+    }
+
+    if (!editDraft.name.trim()) {
+      wx.showToast({ title: '请输入食物名称', icon: 'none' })
+      return
+    }
+
+    if (!editDraft.shelf_life_days) {
+      wx.showToast({ title: '请输入保质期', icon: 'none' })
+      return
+    }
+
+    this.setData({
+      [`selectedItems[${editingIndex}]`]: {
+        ...editDraft,
+        name: editDraft.name.trim(),
+        notes: (editDraft.notes || '').trim(),
+      },
+      editorVisible: false,
+      editingIndex: -1,
+      editDraft: null,
+    })
+  },
+
   removeSelectedItem(e) {
     if (this.data.submitting) {
       return
@@ -272,6 +368,17 @@ Page({
     })
   },
 
+  onEditDraftInputChange(e) {
+    if (this.data.submitting || !this.data.editDraft) {
+      return
+    }
+
+    const field = e.currentTarget.dataset.field
+    this.setData({
+      [`editDraft.${field}`]: e.detail.value,
+    })
+  },
+
   onCategoryChange(e) {
     if (this.data.submitting) {
       return
@@ -294,6 +401,18 @@ Page({
     this.setData({
       [`selectedItems[${itemIndex}].categoryIndex`]: categoryIndex,
       [`selectedItems[${itemIndex}].category`]: CATEGORIES[categoryIndex],
+    })
+  },
+
+  onEditDraftCategoryChange(e) {
+    if (this.data.submitting || !this.data.editDraft) {
+      return
+    }
+
+    const categoryIndex = Number(e.detail.value)
+    this.setData({
+      'editDraft.categoryIndex': categoryIndex,
+      'editDraft.category': CATEGORIES[categoryIndex],
     })
   },
 
