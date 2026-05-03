@@ -2,7 +2,6 @@ __pycache__/
 *.py[cod]
 .DS_Store
 
-/project.config.json
 /project.private.config.json
 
 fridge-manager/backend/uploads/
