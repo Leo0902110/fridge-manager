@@ -26,6 +26,7 @@ class FoodBase(BaseModel):
     """食物基础模型"""
     name: str = Field(..., description="食物名称")
     category: Optional[str] = Field(None, description="食物类别")
+    image_url: Optional[str] = Field(None, description="食物图片 URL")
     location: FoodLocation = Field(default=FoodLocation.FRIDGE, description="存放位置")
     notes: Optional[str] = Field(None, description="备注")
 

@@ -108,7 +108,8 @@
       bindtap="goToDetail"
       data-id="{{item.id}}"
     >
-      <view class="food-icon">
+      <image class="food-thumb" wx:if="{{item.image_url}}" src="{{item.image_url}}" mode="aspectFill" />
+      <view class="food-icon" wx:else>
         <text>{{getCategoryIcon(item.category)}}</text>
       </view>
       <view class="list-main">

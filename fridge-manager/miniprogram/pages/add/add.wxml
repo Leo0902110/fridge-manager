@@ -43,34 +43,120 @@
   <view class="card" wx:if="{{recognitionResults.length > 0}}">
     <view class="section-header result-header">
       <text class="section-title">识别结果</text>
-      <text class="section-hint">选择一个作为表单初稿</text>
+      <text class="section-hint">已选 {{selectedCount}} 项</text>
     </view>
 
-    <view class="list-group result-group">
+    <scroll-view class="result-scroll" scroll-y>
       <view
-        class="list-cell result-cell {{selectedIndex === index ? 'active' : ''}}"
+        class="result-cell {{item.selected ? 'active' : ''}}"
         wx:for="{{recognitionResults}}"
         wx:key="name"
-        bindtap="selectResult"
+        bindtap="toggleResult"
         data-index="{{index}}"
       >
+        <view class="result-check">{{item.selected ? '✓' : ''}}</view>
         <text class="result-icon">{{getCategoryIcon(item.category)}}</text>
         <view class="list-main">
           <text class="list-title">{{item.name}}</text>
           <text class="list-subtitle">{{item.confidence}}% 匹配 · {{item.category}}</text>
         </view>
-        <text class="result-state">{{selectedIndex === index ? '已选' : '选择'}}</text>
+        <text class="result-state">{{item.selected ? '已选' : '选择'}}</text>
       </view>
+    </scroll-view>
+  </view>
+
+  <view class="card selected-editor-card" wx:if="{{selectedItems.length > 0}}">
+    <view class="section-header form-header">
+      <text class="section-title">入库清单</text>
+      <text class="section-hint">逐项确认，可裁剪对应食物</text>
     </view>
+
+    <scroll-view class="selected-scroll" scroll-y>
+      <view
+        class="selected-item"
+        wx:for="{{selectedItems}}"
+        wx:key="sourceIndex"
+      >
+        <view class="selected-item-head">
+          <view class="selected-title-row">
+            <text class="selected-badge">{{index + 1}}</text>
+            <text class="selected-title">{{item.name || '待命名'}}</text>
+          </view>
+          <view class="selected-actions">
+            <button class="mini-btn" bindtap="cropSelectedImage" data-index="{{index}}" disabled="{{submitting || !imagePath}}">{{item.cropStatus}}</button>
+            <button class="mini-btn danger" bindtap="removeSelectedItem" data-index="{{index}}" disabled="{{submitting}}">移除</button>
+          </view>
+        </view>
+
+        <view class="selected-grid">
+          <view class="mini-field">
+            <text class="mini-label">名称</text>
+            <input
+              class="mini-control"
+              value="{{item.name}}"
+              bindinput="onSelectedInputChange"
+              data-index="{{index}}"
+              data-field="name"
+              disabled="{{submitting}}"
+            />
+          </view>
+
+          <view class="mini-field">
+            <text class="mini-label">类别</text>
+            <picker
+              mode="selector"
+              range="{{categories}}"
+              value="{{item.categoryIndex}}"
+              bindchange="onSelectedCategoryChange"
+              data-index="{{index}}"
+              disabled="{{submitting}}"
+            >
+              <view class="mini-control mini-picker">
+                <text>{{item.category}}</text>
+                <text class="chevron">›</text>
+              </view>
+            </picker>
+          </view>
+
+          <view class="mini-field">
+            <text class="mini-label">保质期</text>
+            <input
+              class="mini-control"
+              type="number"
+              value="{{item.shelf_life_days}}"
+              bindinput="onSelectedInputChange"
+              data-index="{{index}}"
+              data-field="shelf_life_days"
+              disabled="{{submitting}}"
+            />
+          </view>
+
+          <view class="mini-field">
+            <text class="mini-label">备注</text>
+            <input
+              class="mini-control"
+              value="{{item.notes}}"
+              placeholder="可选"
+              bindinput="onSelectedInputChange"
+              data-index="{{index}}"
+              data-field="notes"
+              disabled="{{submitting}}"
+            />
+          </view>
+        </view>
+
+        <image class="selected-crop-preview" wx:if="{{item.imagePath}}" src="{{item.imagePath}}" mode="aspectFill" />
+      </view>
+    </scroll-view>
   </view>
 
   <view class="card">
     <view class="section-header form-header">
-      <text class="section-title">食物信息</text>
+      <text class="section-title">{{selectedItems.length > 0 ? '统一设置' : '食物信息'}}</text>
     </view>
 
     <view class="field-group">
-      <view class="field-row">
+      <view class="field-row" wx:if="{{selectedItems.length === 0}}">
         <text class="field-label">食物名称</text>
         <input
           class="field-control"
@@ -82,7 +168,7 @@
         />
       </view>
 
-      <view class="field-row">
+      <view class="field-row" wx:if="{{selectedItems.length === 0}}">
         <text class="field-label">食物类别</text>
         <picker
           mode="selector"
@@ -128,7 +214,7 @@
         </view>
       </view>
 
-      <view class="field-row">
+      <view class="field-row" wx:if="{{selectedItems.length === 0}}">
         <text class="field-label">保质期（天）</text>
         <input
           class="field-control"
@@ -142,7 +228,7 @@
         <text class="field-helper" wx:if="{{autoShelfLife}}">建议值：{{autoShelfLife}} 天</text>
       </view>
 
-      <view class="field-row">
+      <view class="field-row" wx:if="{{selectedItems.length === 0}}">
         <text class="field-label">备注</text>
         <textarea
           class="field-textarea"
@@ -161,5 +247,5 @@
     class="btn btn-primary submit-btn"
     bindtap="submitFood"
     disabled="{{submitting || recognizing}}"
-  >{{recognizing ? '识别中...' : submitting ? '保存中...' : '保存到冰箱'}}</button>
+  >{{recognizing ? '识别中...' : submitting ? '保存中...' : selectedItems.length > 0 ? '批量保存到冰箱' : '保存到冰箱'}}</button>
 </view>

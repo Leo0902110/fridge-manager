@@ -2,10 +2,13 @@
 食物管理 API
 """
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Request
 from datetime import date, timedelta
+from pathlib import Path
 from typing import Optional
+from uuid import uuid4
 import aiosqlite
+import shutil
 
 from app.db.database import get_db
 from app.models.food import (
@@ -14,6 +17,8 @@ from app.models.food import (
 )
 
 router = APIRouter()
+UPLOAD_DIR = Path(__file__).resolve().parents[2] / "uploads"
+ALLOWED_IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
 
 
 async def calculate_expiry_date(put_date: date, shelf_life_days: int, location: str) -> date:
@@ -114,7 +119,7 @@ async def create_food(
     """, (
         food.name,
         food.category,
-        None,
+        food.image_url,
         food.put_date,
         expiry_date,
         shelf_life_days,
@@ -134,6 +139,36 @@ async def create_food(
         data=dict(row),
         message="添加成功"
     )
+
+
+@router.post("/upload-image")
+async def upload_food_image(
+    request: Request,
+    image: UploadFile = File(...),
+):
+    """上传食物裁剪图，返回可保存到食物记录的 URL"""
+    suffix = Path(image.filename or "").suffix.lower()
+    if suffix not in ALLOWED_IMAGE_SUFFIXES:
+        suffix = ".jpg"
+
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    filename = f"{uuid4().hex}{suffix}"
+    file_path = UPLOAD_DIR / filename
+
+    try:
+        with file_path.open("wb") as f:
+            shutil.copyfileobj(image.file, f)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"图片保存失败：{str(e)}")
+
+    image_url = str(request.base_url.replace(path=f"uploads/{filename}", query=""))
+    return {
+        "success": True,
+        "data": {
+            "image_url": image_url,
+        },
+        "message": "图片上传成功",
+    }
 
 
 @router.put("/{food_id}", response_model=FoodDetailResponse)

@@ -42,6 +42,8 @@ App({
       '乳制品': { icon: '🥛', color: '#FFFFFF' },
       '豆制品': { icon: '🧊', color: '#AF52DE' },
       '主食': { icon: '🍚', color: '#FF9500' },
+      '熟食': { icon: '🍲', color: '#A2845E' },
+      '剩菜': { icon: '🥡', color: '#64D2FF' },
       '其他': { icon: '📦', color: '#8E8E93' },
     },
     

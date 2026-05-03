@@ -57,6 +57,32 @@ export const foodAPI = {
       data,
     })
   },
+
+  // 上传食物裁剪图
+  uploadImage(imagePath) {
+    return new Promise((resolve, reject) => {
+      wx.uploadFile({
+        url: `${app.globalData.API_BASE_URL}/foods/upload-image`,
+        filePath: imagePath,
+        name: 'image',
+        success: (res) => {
+          try {
+            const data = JSON.parse(res.data)
+            if (data.success) {
+              resolve(data)
+            } else {
+              reject({ message: data.message || '图片上传失败' })
+            }
+          } catch (e) {
+            reject({ message: '图片上传结果解析失败' })
+          }
+        },
+        fail: (err) => {
+          reject({ message: err.errMsg || '图片上传失败' })
+        },
+      })
+    })
+  },
   
   // 更新食物
   update(id, data) {

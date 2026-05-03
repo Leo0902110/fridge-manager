@@ -216,7 +216,8 @@
   min-height: 108rpx;
 }
 
-.food-icon {
+.food-icon,
+.food-thumb {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -226,6 +227,10 @@
   border-radius: 50%;
   background: var(--surface-muted);
   font-size: 40rpx;
+}
+
+.food-thumb {
+  border-radius: 18rpx;
 }
 
 .empty-title {
