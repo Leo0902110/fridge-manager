@@ -6,9 +6,12 @@ const app = getApp()
  * 基础请求封装
  */
 function request(url, options = {}) {
+  const fullUrl = `${app.globalData.API_BASE_URL}${url}`
+  console.log('API request:', fullUrl)
+
   return new Promise((resolve, reject) => {
     wx.request({
-      url: `${app.globalData.API_BASE_URL}${url}`,
+      url: fullUrl,
       method: options.method || 'GET',
       data: options.data || {},
       header: {
@@ -29,7 +32,7 @@ function request(url, options = {}) {
       fail: (err) => {
         reject({
           code: 500,
-          message: err.errMsg || '网络错误',
+          message: `${err.errMsg || '网络错误'}：${fullUrl}`,
         })
       },
     })
