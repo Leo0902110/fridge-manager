@@ -2,18 +2,30 @@
 
 const app = getApp()
 
+function cleanData(data = {}) {
+  const cleaned = {}
+  Object.keys(data).forEach((key) => {
+    const value = data[key]
+    if (value !== null && value !== undefined && value !== '') {
+      cleaned[key] = value
+    }
+  })
+  return cleaned
+}
+
 /**
  * 基础请求封装
  */
 function request(url, options = {}) {
   const fullUrl = `${app.globalData.API_BASE_URL}${url}`
-  console.log('API request:', fullUrl)
+  const data = cleanData(options.data || {})
+  console.log('API request:', fullUrl, data)
 
   return new Promise((resolve, reject) => {
     wx.request({
       url: fullUrl,
       method: options.method || 'GET',
-      data: options.data || {},
+      data,
       header: {
         'Content-Type': 'application/json',
         ...options.header,
@@ -25,7 +37,7 @@ function request(url, options = {}) {
         } else {
           reject({
             code: res.statusCode,
-            message: res.data?.detail || '请求失败',
+            message: typeof res.data?.detail === 'string' ? res.data.detail : (res.data?.message || '请求失败'),
           })
         }
       },

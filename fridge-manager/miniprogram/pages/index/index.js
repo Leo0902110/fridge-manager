@@ -58,9 +58,8 @@ Page({
       }
       
       // 加载食物列表
-      const listRes = await api.food.list({
-        status: this.data.filter === 'warning' ? 'warning' : null,
-      })
+      const listParams = this.data.filter === 'warning' ? { status: 'warning' } : {}
+      const listRes = await api.food.list(listParams)
       if (listRes.success) {
         this.setData({
           foodList: listRes.data,
