@@ -3,7 +3,7 @@ AI 食物识别 API
 支持通义千问和百度 AI
 """
 
-from fastapi import APIRouter, HTTPException, Form, UploadFile, File
+from fastapi import APIRouter, HTTPException, Form, UploadFile, File, Request
 from pydantic import BaseModel
 from typing import Optional, List
 import os
@@ -47,11 +47,12 @@ FOOD_CATEGORY_MAP = {
     "白菜": "蔬菜", "青菜": "蔬菜", "菠菜": "蔬菜", "生菜": "蔬菜",
     "胡萝卜": "蔬菜", "土豆": "蔬菜", "西红柿": "蔬菜", "黄瓜": "蔬菜",
     "苹果": "水果", "香蕉": "水果", "橙子": "水果", "葡萄": "水果",
-    "猪肉": "肉类", "牛肉": "肉类", "鸡肉": "肉类",
-    "鱼": "海鲜", "虾": "海鲜",
+    "猪肉": "肉类", "牛肉": "肉类", "牛排": "肉类", "羊肉": "肉类",
+    "鸡肉": "肉类", "鸡胸肉": "肉类", "鱼": "海鲜", "虾": "海鲜",
     "鸡蛋": "蛋类", "牛奶": "乳制品", "酸奶": "乳制品",
     "豆腐": "豆制品", "米饭": "主食", "面包": "主食",
-    "剩菜": "剩菜", "剩饭": "剩菜", "炒菜": "熟食", "熟肉": "熟食",
+    "剩菜": "剩菜", "剩饭": "剩菜", "便当": "熟食", "套餐": "熟食",
+    "熟食餐盘": "熟食", "炒菜": "熟食", "熟肉": "熟食",
     "炒饭": "熟食", "汤": "熟食", "红烧肉": "熟食", "番茄炒蛋": "熟食",
 }
 
@@ -164,10 +165,24 @@ async def infer_shelf_life(
 
 
 @router.post("/name", response_model=RecognitionResponse)
-async def recognize_food_by_name(name: str = Form(...)):
+async def recognize_food_by_name(request: Request, name: Optional[str] = Form(None)):
     """
     根据食物名称查询类别
     """
+    if not name:
+        try:
+            body = await request.json()
+            name = body.get("name")
+        except Exception:
+            name = None
+
+    if not name:
+        return RecognitionResponse(
+            success=True,
+            message="请输入食物名称",
+            data=[],
+        )
+
     # 查找匹配的食物
     matched = []
     for food_name, category in FOOD_CATEGORY_MAP.items():

@@ -113,6 +113,7 @@ Page({
   },
 
   onLoad() {
+    this.manualLookupSeq = 0
     this.loadShelfLifeReference()
   },
 
@@ -582,8 +583,30 @@ Page({
     if (!name) {
       return
     }
+    const lookupSeq = (this.manualLookupSeq || 0) + 1
+    this.manualLookupSeq = lookupSeq
+
     try {
-      const ref = await api.food.getShelfLifeReference(name, this.data.formData.category)
+      let category = this.data.formData.category
+      if (!category || category === '其他') {
+        const recognized = await api.recognition.recognizeByName(name)
+        if (lookupSeq !== this.manualLookupSeq) {
+          return
+        }
+        if (recognized.success && recognized.data && recognized.data.length > 0) {
+          category = recognized.data[0].category || category
+          const categoryIndex = defaultCategoryIndex(category)
+          this.setData({
+            categoryIndex,
+            'formData.category': CATEGORIES[categoryIndex],
+          })
+        }
+      }
+
+      const ref = await api.food.getShelfLifeReference(name, category)
+      if (lookupSeq !== this.manualLookupSeq) {
+        return
+      }
       if (ref.success && ref.data.length > 0) {
         const shelfRef = ref.data[0]
         const profile = buildShelfProfile(shelfRef)
@@ -592,6 +615,14 @@ Page({
           'formData.shelf_life_days': shelfLife ? String(shelfLife) : this.data.formData.shelf_life_days,
           autoShelfLife: shelfLife || null,
           storageSuggestion: `${LOCATION_LABELS[shelfRef.recommended_location] || '冷藏'} · ${shelfRef.storage_tip || '按当前保存方式自动计算保质期'}`,
+        })
+      } else {
+        const fallbackLocation = getDefaultLocation(name, category)
+        const fallbackShelfLife = getDefaultShelfLife(name, category) || (category === '肉类' ? 3 : '')
+        this.setData({
+          'formData.shelf_life_days': fallbackShelfLife ? String(fallbackShelfLife) : this.data.formData.shelf_life_days,
+          autoShelfLife: fallbackShelfLife || null,
+          storageSuggestion: `${LOCATION_LABELS[fallbackLocation] || '冷藏'} · ${getDefaultStorageTip(name, category, fallbackLocation)}`,
         })
       }
     } catch (err) {
