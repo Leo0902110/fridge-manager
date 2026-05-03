@@ -40,7 +40,32 @@
     <text class="empty-recognition-subtitle">你仍然可以直接手动填写信息并保存。</text>
   </view>
 
-  <view class="card" wx:if="{{recognitionResults.length > 0}}">
+  <view class="card entry-mode-card" wx:if="{{wholeItem && recognitionResults.length > 0}}">
+    <view class="section-header result-header">
+      <text class="section-title">入库方式</text>
+      <text class="section-hint">{{modeReason || '按当前图片推荐'}}</text>
+    </view>
+    <view class="entry-mode-switch">
+      <view
+        class="entry-mode-option {{entryMode === 'whole' ? 'active' : ''}}"
+        bindtap="switchEntryMode"
+        data-mode="whole"
+      >
+        <text class="entry-mode-title">整份熟食</text>
+        <text class="entry-mode-subtitle">一条记录，默认 2 天</text>
+      </view>
+      <view
+        class="entry-mode-option {{entryMode === 'split' ? 'active' : ''}}"
+        bindtap="switchEntryMode"
+        data-mode="split"
+      >
+        <text class="entry-mode-title">拆分食材</text>
+        <text class="entry-mode-subtitle">多条记录，逐项管理</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{recognitionResults.length > 0 && entryMode === 'split'}}">
     <view class="section-header result-header">
       <text class="section-title">识别结果</text>
       <text class="section-hint">已选 {{selectedCount}} 项</text>
@@ -68,7 +93,7 @@
   <view class="card selected-editor-card" wx:if="{{selectedItems.length > 0}}">
     <view class="section-header form-header">
       <text class="section-title">入库清单</text>
-      <text class="section-hint">确认后批量入库</text>
+      <text class="section-hint">{{entryMode === 'whole' ? '按整份保存' : '确认后批量入库'}}</text>
     </view>
 
     <scroll-view class="selected-scroll" scroll-y>
@@ -207,13 +232,13 @@
   <view class="batch-bar" wx:if="{{selectedItems.length > 0}}">
     <view class="batch-info">
       <text class="batch-count">已选 {{selectedItems.length}} 项</text>
-      <text class="batch-caption">可点开单项编辑或裁剪图片</text>
+      <text class="batch-caption">{{entryMode === 'whole' ? '整份熟食默认使用原图' : '可点开单项编辑或调整图片'}}</text>
     </view>
     <button
       class="batch-submit"
       bindtap="submitFood"
       disabled="{{submitting || recognizing || selectedItems.length === 0}}"
-    >{{submitting ? '保存中' : '批量入库'}}</button>
+    >{{submitting ? '保存中' : entryMode === 'whole' ? '整份入库' : '批量入库'}}</button>
   </view>
 
   <view class="editor-overlay" wx:if="{{editorVisible}}" catchtap="closeItemEditor">

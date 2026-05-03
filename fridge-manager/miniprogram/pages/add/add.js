@@ -3,6 +3,7 @@ const app = getApp()
 const api = require('../../utils/api.js')
 
 const CATEGORIES = ['蔬菜', '水果', '肉类', '海鲜', '蛋类', '乳制品', '豆制品', '主食', '熟食', '剩菜', '其他']
+const COOKED_KEYWORDS = ['熟食', '剩菜', '便当', '餐盘', '拼盘', '套餐', '盒饭', '饭盒', '炒菜', '炒饭', '盖饭', '剩饭', '汤']
 
 function defaultCategoryIndex(category) {
   const index = CATEGORIES.indexOf(category)
@@ -11,17 +12,26 @@ function defaultCategoryIndex(category) {
 
 function buildSelectedItem(result, sourceIndex, imagePath) {
   const category = result.category || '其他'
+  const shelfLife = result.shelf_life_days || getDefaultShelfLife(result.name, category)
   return {
     sourceIndex,
     name: result.name || '',
     category,
     categoryIndex: defaultCategoryIndex(category),
     confidence: result.confidence || 80,
-    shelf_life_days: '',
+    shelf_life_days: shelfLife ? String(shelfLife) : '',
     notes: '',
     imagePath: '',
-    cropStatus: imagePath ? '待裁剪' : '无图片',
+    cropStatus: imagePath ? '使用原图' : '无图片',
   }
+}
+
+function getDefaultShelfLife(name, category) {
+  const text = `${name || ''}${category || ''}`
+  if (category === '熟食' || category === '剩菜' || COOKED_KEYWORDS.some(keyword => text.indexOf(keyword) >= 0)) {
+    return 2
+  }
+  return ''
 }
 
 Page({
@@ -31,6 +41,9 @@ Page({
 
     imagePath: '',
     recognitionResults: [],
+    wholeItem: null,
+    entryMode: 'split',
+    modeReason: '',
     selectedItems: [],
     selectedCount: 0,
     editorVisible: false,
@@ -75,6 +88,9 @@ Page({
         this.setData({
           imagePath: tempFilePath,
           recognitionResults: [],
+          wholeItem: null,
+          entryMode: 'split',
+          modeReason: '',
           selectedItems: [],
           selectedCount: 0,
           autoShelfLife: null,
@@ -88,13 +104,20 @@ Page({
           const result = await api.recognition.recognizeImage(tempFilePath)
           const results = (result.success && result.data ? result.data : []).map((item, index) => ({
             ...item,
-            selected: true,
+            selected: result.mode !== 'whole',
             sourceIndex: index,
           }))
-          const selectedItems = results.map((item, index) => buildSelectedItem(item, index, tempFilePath))
+          const wholeItem = result.whole_food ? buildSelectedItem(result.whole_food, -1, tempFilePath) : null
+          const shouldUseWhole = result.mode === 'whole' && wholeItem
+          const selectedItems = shouldUseWhole
+            ? [wholeItem]
+            : results.map((item, index) => buildSelectedItem(item, index, tempFilePath))
 
           this.setData({
             recognitionResults: results,
+            wholeItem,
+            entryMode: shouldUseWhole ? 'whole' : 'split',
+            modeReason: result.mode_reason || '',
             selectedItems,
             selectedCount: selectedItems.length,
           })
@@ -120,8 +143,41 @@ Page({
     })
   },
 
+  switchEntryMode(e) {
+    if (this.data.submitting || this.data.recognizing) {
+      return
+    }
+
+    const mode = e.currentTarget.dataset.mode
+    if (mode === this.data.entryMode) {
+      return
+    }
+
+    const results = this.data.recognitionResults.map(item => ({
+      ...item,
+      selected: mode === 'split',
+    }))
+    const selectedItems = mode === 'whole' && this.data.wholeItem
+      ? [{ ...this.data.wholeItem }]
+      : results.map((item, index) => buildSelectedItem(item, index, this.data.imagePath))
+
+    this.setData({
+      entryMode: mode,
+      recognitionResults: results,
+      selectedItems,
+      selectedCount: selectedItems.length,
+    })
+
+    this.fillShelfLifeForSelected()
+  },
+
   toggleResult(e) {
     if (this.data.submitting || this.data.recognizing) {
+      return
+    }
+
+    if (this.data.entryMode !== 'split') {
+      this.switchEntryMode({ currentTarget: { dataset: { mode: 'split' } } })
       return
     }
 
@@ -160,6 +216,18 @@ Page({
   async fillShelfLifeForItem(index) {
     const item = this.data.selectedItems[index]
     if (!item || !item.name) {
+      return
+    }
+
+    if (item.shelf_life_days) {
+      return
+    }
+
+    const defaultShelfLife = getDefaultShelfLife(item.name, item.category)
+    if (defaultShelfLife) {
+      this.setData({
+        [`selectedItems[${index}].shelf_life_days`]: String(defaultShelfLife),
+      })
       return
     }
 

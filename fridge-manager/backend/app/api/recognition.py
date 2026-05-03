@@ -26,6 +26,7 @@ class RecognitionResult(BaseModel):
     confidence: float
     category: Optional[str] = None
     reason: Optional[str] = None
+    shelf_life_days: Optional[int] = None
 
 
 class RecognitionResponse(BaseModel):
@@ -33,6 +34,9 @@ class RecognitionResponse(BaseModel):
     success: bool
     message: str
     data: Optional[List[RecognitionResult]] = None
+    mode: Optional[str] = None
+    mode_reason: Optional[str] = None
+    whole_food: Optional[RecognitionResult] = None
     shelf_life: Optional[dict] = None
 
 
@@ -70,22 +74,38 @@ async def recognize_food_image(image: UploadFile = File(...)):
         # 优先使用千问 AI
         if os.getenv("DASHSCOPE_API_KEY"):
             try:
-                foods = qwen_service.recognize_food_image(temp_path)
+                recognition = qwen_service.recognize_food_image(temp_path)
+                if isinstance(recognition, list):
+                    recognition = {"mode": "split", "reason": "", "whole_food": None, "foods": recognition}
+                foods = recognition.get("foods", [])
+                whole_food = recognition.get("whole_food")
                 
-                if foods:
+                if foods or whole_food:
                     results = [
                         RecognitionResult(
                             name=f.get('name', '未知食物'),
                             confidence=f.get('confidence', 80.0),
                             category=f.get('category', '其他'),
+                            shelf_life_days=f.get('shelf_life_days'),
                         )
                         for f in foods
                     ]
+                    whole_result = None
+                    if whole_food:
+                        whole_result = RecognitionResult(
+                            name=whole_food.get('name', '熟食餐盘'),
+                            confidence=whole_food.get('confidence', 80.0),
+                            category=whole_food.get('category', '熟食'),
+                            shelf_life_days=whole_food.get('shelf_life_days', 2),
+                        )
                     
                     return RecognitionResponse(
                         success=True,
-                        message=f"成功识别出 {len(results)} 种食物（千问 AI）",
+                        message=f"成功识别出 {len(results)} 个可拆分结果（千问 AI）",
                         data=results,
+                        mode=recognition.get("mode", "split"),
+                        mode_reason=recognition.get("reason", ""),
+                        whole_food=whole_result,
                     )
             except Exception as e:
                 # 降级到百度 AI 或返回错误

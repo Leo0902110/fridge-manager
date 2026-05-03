@@ -7,7 +7,7 @@ import logging
 import os
 from http import HTTPStatus
 from pathlib import Path
-from typing import List
+from typing import Dict
 
 from dotenv import load_dotenv
 
@@ -55,7 +55,7 @@ class QwenService:
         self._refresh_config()
         return dashscope is not None and bool(self.api_key)
     
-    def recognize_food_image(self, image_path: str) -> List[dict]:
+    def recognize_food_image(self, image_path: str) -> Dict[str, object]:
         """
         使用 Qwen-VL 识别食物图片
         
@@ -63,7 +63,7 @@ class QwenService:
             image_path: 图片路径或 URL
             
         Returns:
-            识别结果列表，如：[{"name": "苹果", "category": "水果", "confidence": 95}]
+            识别结果，如：{"mode": "whole", "whole_food": {...}, "foods": [...]}
         """
         if not self._is_available():
             raise ValueError("千问 AI 当前不可用")
@@ -78,15 +78,23 @@ class QwenService:
                 'role': 'user',
                 'content': [
                     {'image': image_path},
-                    {'text': '''请识别这张图片中的所有可入库食物，包括生鲜、熟食、炒菜、剩饭剩菜、汤、打包盒里的食物和盘中菜。请把一张图里的不同食物拆成多条结果，不要只返回前 3 个。
+                    {'text': '''请识别这张图片中的可入库食物，并判断应该按“整份入库”还是“拆分入库”。
+
+重要原则：
+1. 如果图片是已经烹饪好的盘中餐、便当、饭盒、剩饭剩菜、套餐、拼盘、炒菜配饭等组合熟食，默认 mode 返回 "whole"，把它作为一个整体入库，不要把鸡蛋、西兰花、米饭、面条等配菜拆成独立库存。
+2. 如果图片是未加工食材、生鲜、多个独立包装、多个独立水果蔬菜，mode 返回 "split"，每个可单独管理的食物返回一条。
+3. 对整份熟食，whole_food 的类别用“熟食”或“剩菜”，冷藏保质期通常为 1-2 天；不确定时 shelf_life_days 返回 2。
 
 以 JSON 格式返回结果：
 {
+  "mode": "whole 或 split",
+  "reason": "为什么这样入库，15字以内",
+  "whole_food": {"name": "整份食物名称", "category": "类别（熟食/剩菜/主食/其他）", "confidence": 置信度 0-100, "shelf_life_days": 冷藏建议天数},
   "foods": [
-    {"name": "食物名称", "category": "类别（蔬菜/水果/肉类/海鲜/蛋类/乳制品/豆制品/主食/熟食/剩菜/其他）", "confidence": 置信度 0-100}
+    {"name": "可拆分食物名称", "category": "类别（蔬菜/水果/肉类/海鲜/蛋类/乳制品/豆制品/主食/熟食/剩菜/其他）", "confidence": 置信度 0-100, "shelf_life_days": 冷藏建议天数}
   ]
 }
-命名要具体，例如“番茄炒蛋”“剩米饭”“红烧肉”，无法确认具体菜名时用“炒菜”“剩菜”等可理解名称。只返回 JSON，不要其他文字。如果无法识别，返回空数组。'''}
+命名要符合库存管理，而不是菜谱拆料。例如一盘牛排、面、蛋和蔬菜应命名为“牛排面套餐”或“熟食餐盘”；一盒剩饭剩菜命名为“剩菜便当”。只返回 JSON，不要其他文字。如果无法识别，mode 返回 "split"，foods 返回空数组。'''}
                 ]
             }]
             
@@ -106,6 +114,10 @@ class QwenService:
                     content = content.replace('```json', '').replace('```', '').strip()
                     result = json.loads(content)
                     foods = result.get('foods', [])
+                    whole_food = result.get('whole_food') or None
+                    mode = result.get('mode', 'split')
+                    if mode not in ('whole', 'split'):
+                        mode = 'split'
                     
                     # 确保 confidence 是数字
                     for food in foods:
@@ -113,11 +125,28 @@ class QwenService:
                             food['confidence'] = float(food['confidence'])
                         else:
                             food['confidence'] = 80.0
+                        if 'shelf_life_days' in food and food['shelf_life_days'] is not None:
+                            food['shelf_life_days'] = int(food['shelf_life_days'])
+
+                    if whole_food:
+                        if 'confidence' in whole_food:
+                            whole_food['confidence'] = float(whole_food['confidence'])
+                        else:
+                            whole_food['confidence'] = 80.0
+                        if not whole_food.get('category'):
+                            whole_food['category'] = '熟食'
+                        if 'shelf_life_days' in whole_food and whole_food['shelf_life_days'] is not None:
+                            whole_food['shelf_life_days'] = int(whole_food['shelf_life_days'])
                     
-                    return foods
+                    return {
+                        "mode": mode,
+                        "reason": result.get('reason', ''),
+                        "whole_food": whole_food,
+                        "foods": foods,
+                    }
                 except json.JSONDecodeError as e:
                     logger.error(f"解析 AI 识别结果失败：{e}, content: {content}")
-                    return []
+                    return {"mode": "split", "reason": "", "whole_food": None, "foods": []}
             else:
                 logger.error(f"千问 API 调用失败：{response.code} - {response.message}")
                 raise ValueError(f"AI 识别失败：{response.message}")

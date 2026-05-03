@@ -69,6 +69,19 @@ async def init_db():
             room_temp_days INTEGER
         )
     """)
+
+    await db.execute("""
+        DELETE FROM shelf_life_reference
+        WHERE id NOT IN (
+            SELECT MIN(id)
+            FROM shelf_life_reference
+            GROUP BY food_name
+        )
+    """)
+    await db.execute("""
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_shelf_life_reference_food_name
+        ON shelf_life_reference(food_name)
+    """)
     
     # 插入常见食物保质期数据
     await db.execute("""
@@ -99,6 +112,11 @@ async def init_db():
         ('奶酪', '乳制品', 14, 180, 3),
         ('黄油', '乳制品', 30, 365, 7),
         ('剩菜', '剩菜', 2, 14, 0),
+        ('剩菜便当', '剩菜', 2, 14, 0),
+        ('熟食餐盘', '熟食', 2, 14, 0),
+        ('熟食拼盘', '熟食', 2, 14, 0),
+        ('便当', '熟食', 2, 14, 0),
+        ('套餐', '熟食', 2, 14, 0),
         ('炒菜', '熟食', 2, 14, 0),
         ('炒饭', '熟食', 2, 30, 0),
         ('熟肉', '熟食', 3, 30, 0),
