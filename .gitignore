@@ -4,4 +4,7 @@ __pycache__/
 
 /project.private.config.json
 
+fridge-manager/backend/.env
+fridge-manager/backend/.venv/
+fridge-manager/backend/fridge.db
 fridge-manager/backend/uploads/
