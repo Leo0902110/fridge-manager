@@ -39,7 +39,7 @@ function request(url, options = {}) {
 /**
  * 食物管理 API
  */
-export const foodAPI = {
+const foodAPI = {
   // 获取食物列表
   list(params = {}) {
     return request('/foods', { data: params })
@@ -115,7 +115,7 @@ export const foodAPI = {
 /**
  * AI 识别 API
  */
-export const recognitionAPI = {
+const recognitionAPI = {
   // 图片识别
   recognizeImage(imagePath) {
     return new Promise((resolve, reject) => {
@@ -144,8 +144,6 @@ export const recognitionAPI = {
   
   // 名称查询
   recognizeByName(name) {
-    const formData = new FormData()
-    formData.append('name', name)
     return request('/recognition/name', {
       method: 'POST',
       data: { name },
@@ -161,7 +159,7 @@ export const recognitionAPI = {
 /**
  * 提醒 API
  */
-export const reminderAPI = {
+const reminderAPI = {
   // 获取待发送提醒
   getPending() {
     return request('/reminders/pending')
@@ -180,8 +178,11 @@ export const reminderAPI = {
   },
 }
 
-export default {
+module.exports = {
   food: foodAPI,
   recognition: recognitionAPI,
   reminder: reminderAPI,
+  foodAPI,
+  recognitionAPI,
+  reminderAPI,
 }

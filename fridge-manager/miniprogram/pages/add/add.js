@@ -78,6 +78,7 @@ Page({
         wx.showNavigationBarLoading()
 
         wx.showLoading({ title: 'AI 识别中...' })
+        let errorMessage = ''
         try {
           const result = await api.recognition.recognizeImage(tempFilePath)
           const results = (result.success && result.data ? result.data : []).map((item, index) => ({
@@ -98,14 +99,17 @@ Page({
           }
         } catch (err) {
           console.error('识别失败:', err)
-          wx.showToast({
-            title: err.message || '识别失败',
-            icon: 'none',
-          })
+          errorMessage = err.message || '识别失败'
         } finally {
           this.setData({ recognizing: false })
           wx.hideLoading()
           wx.hideNavigationBarLoading()
+          if (errorMessage) {
+            wx.showToast({
+              title: errorMessage,
+              icon: 'none',
+            })
+          }
         }
       },
     })
