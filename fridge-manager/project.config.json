@@ -12,6 +12,7 @@
       "outputPath": ""
     },
     "useCompilerPlugins": false,
+    "urlCheck": false,
     "minifyWXML": true,
     "compileWorklet": false,
     "uploadWithSourceMap": true,
