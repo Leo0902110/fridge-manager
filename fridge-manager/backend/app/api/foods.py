@@ -38,7 +38,7 @@ async def determine_status(expiry_date: date, today: date) -> FoodStatus:
 
 @router.get("", response_model=FoodListResponse)
 async def list_foods(
-    status: Optional[FoodStatus] = None,
+    status: Optional[str] = None,
     location: Optional[str] = None,
     db: aiosqlite.Connection = Depends(get_db),
 ):
@@ -46,9 +46,12 @@ async def list_foods(
     query = "SELECT * FROM foods WHERE 1=1"
     params = []
     
-    if status:
+    if status and status not in ("null", "undefined"):
+        valid_statuses = {item.value for item in FoodStatus}
+        if status not in valid_statuses:
+            raise HTTPException(status_code=422, detail="无效的食物状态")
         query += " AND status = ?"
-        params.append(status.value)
+        params.append(status)
     
     if location:
         query += " AND location = ?"
