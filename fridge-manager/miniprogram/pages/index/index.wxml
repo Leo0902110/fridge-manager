@@ -84,8 +84,11 @@
     </view>
   </view>
 
-  <view class="section-header">
-    <text class="section-title">全部食物</text>
+  <view class="section-header inventory-header">
+    <view>
+      <text class="section-title">库存倒计时</text>
+      <text class="section-hint inventory-hint">已过期、临期、健康从上到下排列</text>
+    </view>
     <view class="segmented-control">
       <text
         class="segment-item {{filter === 'all' ? 'active' : ''}}"
@@ -100,26 +103,29 @@
     </view>
   </view>
 
-  <view class="list-group" wx:if="{{foodList.length > 0}}">
+  <view class="risk-list" wx:if="{{foodList.length > 0}}">
     <view
-      class="list-cell food-cell"
+      class="risk-food-card risk-{{item.riskType}}"
       wx:for="{{foodList}}"
       wx:key="id"
       bindtap="goToDetail"
       data-id="{{item.id}}"
     >
-      <image class="food-thumb" wx:if="{{item.image_url}}" src="{{item.image_url}}" mode="aspectFill" />
-      <view class="food-icon" wx:else>
-        <text>{{getCategoryIcon(item.category)}}</text>
-      </view>
-      <view class="list-main">
-        <text class="list-title">{{item.name}}</text>
-        <text class="list-subtitle">{{item.location === 'fridge' ? '冷藏' : item.location === 'freezer' ? '冷冻' : '常温'}} · 放入 {{formatDate(item.put_date)}}</text>
-      </view>
-      <view class="right-meta">
-        <view class="status-tag status-{{calcDaysLeft(item.expiry_date).type}}">
-          {{calcDaysLeft(item.expiry_date).text}}
+      <view class="risk-light"></view>
+      <view class="risk-main">
+        <image class="risk-food-thumb" wx:if="{{item.image_url}}" src="{{item.image_url}}" mode="aspectFill" />
+        <view class="risk-food-icon" wx:else>
+          <text>{{getCategoryIcon(item.category)}}</text>
         </view>
+        <view class="risk-copy">
+          <text class="risk-title">{{item.name}}</text>
+          <text class="risk-subtitle">{{item.location === 'fridge' ? '冷藏' : item.location === 'freezer' ? '冷冻' : '常温'}} · {{item.category || '其他'}}</text>
+        </view>
+      </view>
+      <view class="risk-meta">
+        <text class="risk-date">过期日：{{item.expiry_date}}</text>
+        <text class="risk-countdown">{{item.countdownText}}</text>
+        <text class="risk-badge">{{item.badgeText}}</text>
         <text class="chevron">›</text>
       </view>
     </view>

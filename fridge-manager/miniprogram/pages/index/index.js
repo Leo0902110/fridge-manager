@@ -2,6 +2,54 @@
 const app = getApp()
 const api = require('../../utils/api.js')
 
+function getCountdownInfo(expiryDate) {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  const expiry = new Date(expiryDate)
+  expiry.setHours(0, 0, 0, 0)
+
+  const days = Math.ceil((expiry - today) / (24 * 60 * 60 * 1000))
+
+  if (days < 0) {
+    return {
+      days,
+      riskRank: 0,
+      riskType: 'expired',
+      countdownText: `已过期 ${Math.abs(days)} 天`,
+      badgeText: '已过期',
+    }
+  }
+
+  if (days === 0) {
+    return {
+      days,
+      riskRank: 1,
+      riskType: 'warning',
+      countdownText: '今天到期',
+      badgeText: '今天',
+    }
+  }
+
+  if (days <= 3) {
+    return {
+      days,
+      riskRank: 1,
+      riskType: 'warning',
+      countdownText: `${days} 天后到期`,
+      badgeText: '即将过期',
+    }
+  }
+
+  return {
+    days,
+    riskRank: 2,
+    riskType: 'fresh',
+    countdownText: `${days} 天后到期`,
+    badgeText: '健康',
+  }
+}
+
 Page({
   data: {
     stats: {
@@ -61,8 +109,23 @@ Page({
       const listParams = this.data.filter === 'warning' ? { status: 'warning' } : {}
       const listRes = await api.food.list(listParams)
       if (listRes.success) {
+        const foodList = listRes.data
+          .map((food) => {
+            const countdown = getCountdownInfo(food.expiry_date)
+            return {
+              ...food,
+              ...countdown,
+            }
+          })
+          .sort((a, b) => {
+            if (a.riskRank !== b.riskRank) {
+              return a.riskRank - b.riskRank
+            }
+            return a.days - b.days
+          })
+
         this.setData({
-          foodList: listRes.data,
+          foodList,
         })
       }
 

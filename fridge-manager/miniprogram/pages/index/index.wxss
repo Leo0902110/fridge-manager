@@ -180,8 +180,17 @@
 }
 
 .section-hint {
+  display: block;
   font-size: 24rpx;
   color: var(--text-secondary);
+}
+
+.inventory-header {
+  align-items: flex-end;
+}
+
+.inventory-hint {
+  margin-top: 6rpx;
 }
 
 .countdown-chip {
@@ -212,25 +221,187 @@
   box-shadow: 0 4rpx 12rpx rgba(15, 23, 42, 0.08);
 }
 
-.food-cell {
-  min-height: 108rpx;
+.risk-list {
+  margin-bottom: 32rpx;
 }
 
-.food-icon,
-.food-thumb {
+.risk-food-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 146rpx;
+  margin-bottom: 20rpx;
+  padding: 24rpx;
+  border-radius: 24rpx;
+  border: 2rpx solid transparent;
+  box-sizing: border-box;
+  box-shadow: 0 10rpx 26rpx rgba(15, 23, 42, 0.05);
+  overflow: hidden;
+}
+
+.risk-food-card:active {
+  opacity: 0.84;
+  transform: scale(0.99);
+}
+
+.risk-food-card:last-child {
+  margin-bottom: 0;
+}
+
+.risk-expired {
+  background: #FFF1F1;
+  border-color: rgba(255, 59, 48, 0.28);
+}
+
+.risk-warning {
+  background: #FFF8EA;
+  border-color: rgba(255, 149, 0, 0.3);
+}
+
+.risk-fresh {
+  background: #F0FAF3;
+  border-color: rgba(52, 199, 89, 0.24);
+}
+
+.risk-light {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 10rpx;
+}
+
+.risk-expired .risk-light {
+  background: #FF3B30;
+}
+
+.risk-warning .risk-light {
+  background: #FF9500;
+}
+
+.risk-fresh .risk-light {
+  background: #34C759;
+}
+
+.risk-main {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+
+.risk-food-icon,
+.risk-food-thumb {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 76rpx;
-  height: 76rpx;
+  flex-shrink: 0;
+  width: 88rpx;
+  height: 88rpx;
   margin-right: 20rpx;
-  border-radius: 50%;
-  background: var(--surface-muted);
+  border-radius: 22rpx;
+  background: rgba(255, 255, 255, 0.72);
   font-size: 40rpx;
 }
 
-.food-thumb {
-  border-radius: 18rpx;
+.risk-food-thumb {
+  background: #FFFFFF;
+}
+
+.risk-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.risk-title {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-bottom: 10rpx;
+  font-size: 34rpx;
+  font-weight: 760;
+}
+
+.risk-expired .risk-title {
+  color: #A61B1B;
+}
+
+.risk-warning .risk-title {
+  color: #9A5A00;
+}
+
+.risk-fresh .risk-title {
+  color: #1F6F3A;
+}
+
+.risk-subtitle {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 24rpx;
+  color: rgba(17, 17, 17, 0.58);
+}
+
+.risk-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex-shrink: 0;
+  margin-left: 18rpx;
+}
+
+.risk-date {
+  margin-bottom: 8rpx;
+  font-size: 24rpx;
+  font-weight: 600;
+  color: rgba(17, 17, 17, 0.62);
+}
+
+.risk-countdown {
+  margin-bottom: 10rpx;
+  font-size: 26rpx;
+  font-weight: 750;
+}
+
+.risk-expired .risk-countdown {
+  color: #C62828;
+}
+
+.risk-warning .risk-countdown {
+  color: #E67E22;
+}
+
+.risk-fresh .risk-countdown {
+  color: #2E7D32;
+}
+
+.risk-badge {
+  padding: 8rpx 16rpx;
+  border-radius: 14rpx;
+  font-size: 24rpx;
+  font-weight: 750;
+}
+
+.risk-expired .risk-badge {
+  background: #FF9DA0;
+  color: #8B1A1A;
+}
+
+.risk-warning .risk-badge {
+  background: #FFD591;
+  color: #8A4B00;
+}
+
+.risk-fresh .risk-badge {
+  background: #A9E8B8;
+  color: #1B5E20;
+}
+
+.risk-meta .chevron {
+  display: none;
 }
 
 .empty-title {
