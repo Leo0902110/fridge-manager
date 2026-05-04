@@ -104,6 +104,8 @@ App({
     // 正式版/体验版必须使用 HTTPS 公网域名；开发版保留本地调试回退。
     API_BASE_URL: getInitialApiBaseUrl(),
     API_BASE_URL_FALLBACKS: getApiBaseUrlFallbacks(),
+    authToken: wx.getStorageSync('FRIDGE_AUTH_TOKEN') || '',
+    loginPromise: null,
     
     // 用户信息
     userInfo: null,

@@ -4,6 +4,7 @@ const app = getApp()
 const DEFAULT_TIMEOUT = 10000
 const UPLOAD_TIMEOUT = 20000
 const RECOGNITION_TIMEOUT = 60000
+const AUTH_TOKEN_KEY = 'FRIDGE_AUTH_TOKEN'
 
 function cleanData(data = {}) {
   const cleaned = {}
@@ -41,6 +42,105 @@ function rejectUnconfiguredApi(reject) {
   return false
 }
 
+function getStoredAuthToken() {
+  if (app.globalData.authToken) {
+    return app.globalData.authToken
+  }
+  const token = wx.getStorageSync(AUTH_TOKEN_KEY) || ''
+  app.globalData.authToken = token
+  return token
+}
+
+function setAuthToken(token) {
+  app.globalData.authToken = token || ''
+  if (token) {
+    wx.setStorageSync(AUTH_TOKEN_KEY, token)
+  } else {
+    wx.removeStorageSync(AUTH_TOKEN_KEY)
+  }
+}
+
+function wxLogin() {
+  return new Promise((resolve, reject) => {
+    wx.login({
+      success(res) {
+        if (res.code) {
+          resolve(res.code)
+          return
+        }
+        reject({ message: '微信登录失败' })
+      },
+      fail(err) {
+        reject({ message: err.errMsg || '微信登录失败' })
+      },
+    })
+  })
+}
+
+function loginWithCode(code) {
+  const baseUrls = getApiBaseUrls().filter(baseUrl => !isPlaceholderApiUrl(baseUrl))
+
+  return new Promise((resolve, reject) => {
+    if (rejectUnconfiguredApi(reject)) {
+      return
+    }
+    if (!baseUrls.length) {
+      reject({ code: 500, message: '后端地址未配置' })
+      return
+    }
+
+    const tryLogin = (index = 0) => {
+      const baseUrl = baseUrls[index]
+      const fullUrl = `${baseUrl}/auth/login`
+      wx.request({
+        url: fullUrl,
+        method: 'POST',
+        data: { code },
+        header: { 'Content-Type': 'application/json' },
+        timeout: DEFAULT_TIMEOUT,
+        success(res) {
+          const data = res.data || {}
+          if (res.statusCode >= 200 && res.statusCode < 300 && data.success && data.data && data.data.token) {
+            rememberSuccessfulBaseUrl(baseUrl)
+            setAuthToken(data.data.token)
+            resolve(data.data.token)
+            return
+          }
+          reject({ code: res.statusCode, message: normalizeErrorMessage(data, '登录失败') })
+        },
+        fail(err) {
+          if (index < baseUrls.length - 1 && shouldRetryNetworkError(err)) {
+            tryLogin(index + 1)
+            return
+          }
+          reject({ code: 500, message: `${err.errMsg || '登录失败'}：${fullUrl}` })
+        },
+      })
+    }
+
+    tryLogin()
+  })
+}
+
+function ensureAuthenticated() {
+  const token = getStoredAuthToken()
+  if (token) {
+    return Promise.resolve(token)
+  }
+
+  if (app.globalData.loginPromise) {
+    return app.globalData.loginPromise
+  }
+
+  const loginPromise = wxLogin().then(code => loginWithCode(code))
+  app.globalData.loginPromise = loginPromise
+  loginPromise.then(
+    () => { app.globalData.loginPromise = null },
+    () => { app.globalData.loginPromise = null },
+  )
+  return loginPromise
+}
+
 function rememberSuccessfulBaseUrl(baseUrl) {
   if (baseUrl && app.globalData.API_BASE_URL !== baseUrl) {
     app.globalData.API_BASE_URL = baseUrl
@@ -73,7 +173,7 @@ function request(url, options = {}) {
   const baseUrls = getApiBaseUrls().filter(baseUrl => !isPlaceholderApiUrl(baseUrl))
   const data = cleanData(options.data || {})
 
-  return new Promise((resolve, reject) => {
+  return ensureAuthenticated().then((authToken) => new Promise((resolve, reject) => {
     if (rejectUnconfiguredApi(reject)) {
       return
     }
@@ -89,6 +189,7 @@ function request(url, options = {}) {
         data,
         header: {
           'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`,
           ...options.header,
         },
         timeout: options.timeout || DEFAULT_TIMEOUT,
@@ -96,6 +197,9 @@ function request(url, options = {}) {
           if (res.statusCode >= 200 && res.statusCode < 300) {
             rememberSuccessfulBaseUrl(baseUrl)
             resolve(res.data)
+          } else if (res.statusCode === 401) {
+            setAuthToken('')
+            reject({ code: 401, message: normalizeErrorMessage(res.data, '登录已过期，请重试') })
           } else {
             reject({
               code: res.statusCode,
@@ -117,12 +221,12 @@ function request(url, options = {}) {
     }
 
     tryRequest()
-  })
+  }))
 }
 
 function uploadFileWithFallback(url, imagePath, options = {}) {
   const baseUrls = getApiBaseUrls().filter(baseUrl => !isPlaceholderApiUrl(baseUrl))
-  return new Promise((resolve, reject) => {
+  return ensureAuthenticated().then((authToken) => new Promise((resolve, reject) => {
     if (rejectUnconfiguredApi(reject)) {
       return
     }
@@ -135,6 +239,10 @@ function uploadFileWithFallback(url, imagePath, options = {}) {
         url: fullUrl,
         filePath: imagePath,
         name: options.name || 'image',
+        header: {
+          Authorization: `Bearer ${authToken}`,
+          ...options.header,
+        },
         timeout: options.timeout || UPLOAD_TIMEOUT,
         success: (res) => {
           try {
@@ -142,6 +250,9 @@ function uploadFileWithFallback(url, imagePath, options = {}) {
             if (res.statusCode >= 200 && res.statusCode < 300 && data.success) {
               rememberSuccessfulBaseUrl(baseUrl)
               resolve(data)
+            } else if (res.statusCode === 401) {
+              setAuthToken('')
+              reject({ message: normalizeErrorMessage(data, '登录已过期，请重试') })
             } else {
               reject({ message: normalizeErrorMessage(data, options.failMessage || '上传失败') })
             }
@@ -160,7 +271,7 @@ function uploadFileWithFallback(url, imagePath, options = {}) {
     }
 
     tryUpload()
-  })
+  }))
 }
 
 /**
@@ -287,10 +398,47 @@ const reminderAPI = {
   },
 }
 
+const authAPI = {
+  login() {
+    return ensureAuthenticated().then(token => ({ success: true, data: { token } }))
+  },
+
+  me() {
+    return request('/auth/me')
+  },
+
+  logout() {
+    const token = getStoredAuthToken()
+    setAuthToken('')
+    if (!token) {
+      return Promise.resolve({ success: true })
+    }
+
+    const baseUrls = getApiBaseUrls().filter(baseUrl => !isPlaceholderApiUrl(baseUrl))
+    return new Promise((resolve) => {
+      if (!baseUrls.length) {
+        resolve({ success: true })
+        return
+      }
+      wx.request({
+        url: `${baseUrls[0]}/auth/logout`,
+        method: 'POST',
+        header: { Authorization: `Bearer ${token}` },
+        timeout: DEFAULT_TIMEOUT,
+        complete() {
+          resolve({ success: true })
+        },
+      })
+    })
+  },
+}
+
 module.exports = {
+  auth: authAPI,
   food: foodAPI,
   recognition: recognitionAPI,
   reminder: reminderAPI,
+  authAPI,
   foodAPI,
   recognitionAPI,
   reminderAPI,

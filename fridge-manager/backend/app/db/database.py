@@ -24,10 +24,33 @@ async def init_db():
     """初始化数据库表"""
     db = await get_db()
     
+    # 用户表：正式上线按微信 openid 隔离每个用户的数据。
+    await db.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            openid TEXT NOT NULL UNIQUE,
+            unionid TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    await db.execute("""
+        CREATE TABLE IF NOT EXISTS user_sessions (
+            token TEXT PRIMARY KEY,
+            user_id INTEGER NOT NULL,
+            expires_at TIMESTAMP NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+    """)
+    await db.execute("CREATE INDEX IF NOT EXISTS idx_user_sessions_user_id ON user_sessions(user_id)")
+    
     # 食物表
     await db.execute("""
         CREATE TABLE IF NOT EXISTS foods (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
             name TEXT NOT NULL,
             category TEXT,
             image_url TEXT,
@@ -38,14 +61,21 @@ async def init_db():
             location TEXT DEFAULT 'fridge',
             notes TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         )
     """)
+    cursor = await db.execute("PRAGMA table_info(foods)")
+    food_columns = {row["name"] for row in await cursor.fetchall()}
+    if "user_id" not in food_columns:
+        await db.execute("ALTER TABLE foods ADD COLUMN user_id INTEGER")
+    await db.execute("CREATE INDEX IF NOT EXISTS idx_foods_user_id ON foods(user_id)")
     
     # 食物状态：fresh(新鲜), warning(临期), expired(过期)
     await db.execute("""
         CREATE TABLE IF NOT EXISTS food_events (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
             food_id INTEGER,
             event_type TEXT NOT NULL,
             name TEXT NOT NULL,
@@ -56,12 +86,14 @@ async def init_db():
             shelf_life_days INTEGER,
             location TEXT,
             notes TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         )
     """)
     cursor = await db.execute("PRAGMA table_info(food_events)")
     event_columns = {row["name"] for row in await cursor.fetchall()}
     event_column_defs = {
+        "user_id": "INTEGER",
         "food_id": "INTEGER",
         "event_type": "TEXT",
         "name": "TEXT",
@@ -76,6 +108,7 @@ async def init_db():
     for column_name, column_type in event_column_defs.items():
         if column_name not in event_columns:
             await db.execute(f"ALTER TABLE food_events ADD COLUMN {column_name} {column_type}")
+    await db.execute("CREATE INDEX IF NOT EXISTS idx_food_events_user_id ON food_events(user_id)")
     
     # 提醒表
     await db.execute("""

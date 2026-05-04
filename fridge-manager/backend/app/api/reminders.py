@@ -10,6 +10,7 @@ from typing import Optional
 import aiosqlite
 
 from app.db.database import get_db
+from app.api.auth import get_current_user
 
 router = APIRouter()
 
@@ -83,6 +84,7 @@ class Reminder(BaseModel):
 @router.get("/pending")
 async def get_pending_reminders(
     db: aiosqlite.Connection = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
 ):
     """获取待发送的提醒"""
     today = date.today()
@@ -91,9 +93,9 @@ async def get_pending_reminders(
         SELECT r.*, f.name as food_name, f.expiry_date
         FROM reminders r
         JOIN foods f ON r.food_id = f.id
-        WHERE r.is_sent = 0 AND r.remind_date <= ?
+        WHERE f.user_id = ? AND r.is_sent = 0 AND r.remind_date <= ?
         ORDER BY r.remind_date ASC
-    """, (today.isoformat(),))
+    """, (current_user["id"], today.isoformat()))
     
     rows = await cursor.fetchall()
     
@@ -107,6 +109,7 @@ async def get_pending_reminders(
 @router.post("/check-expiry")
 async def check_and_create_expiry_reminders(
     db: aiosqlite.Connection = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
 ):
     """
     检查即将过期的食物并创建提醒
@@ -119,8 +122,8 @@ async def check_and_create_expiry_reminders(
     # 查找 3 天内过期的食物
     cursor = await db.execute("""
         SELECT * FROM foods
-        WHERE expiry_date <= ?
-    """, (warning_date.isoformat(),))
+        WHERE user_id = ? AND expiry_date <= ?
+    """, (current_user["id"], warning_date.isoformat()))
     
     foods = await cursor.fetchall()
     created_count = 0
@@ -137,9 +140,9 @@ async def check_and_create_expiry_reminders(
             policy = build_reminder_policy(food)
             
             await db.execute("""
-                INSERT INTO reminders (food_id, remind_date, message)
-                VALUES (?, ?, ?)
-            """, (food["id"], policy["remind_date"].isoformat(), policy["message"]))
+                INSERT INTO reminders (food_id, user_id, remind_date, message)
+                VALUES (?, ?, ?, ?)
+            """, (food["id"], current_user["id"], policy["remind_date"].isoformat(), policy["message"]))
             created_count += 1
     
     await db.commit()
@@ -157,9 +160,13 @@ async def check_and_create_expiry_reminders(
 @router.get("/strategy")
 async def get_reminder_strategy(
     db: aiosqlite.Connection = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
 ):
     """预览当前库存的动态管家提醒策略。"""
-    cursor = await db.execute("SELECT * FROM foods ORDER BY expiry_date ASC")
+    cursor = await db.execute(
+        "SELECT * FROM foods WHERE user_id = ? ORDER BY expiry_date ASC",
+        (current_user["id"],),
+    )
     foods = await cursor.fetchall()
     strategies = []
     for food in foods:
@@ -184,11 +191,16 @@ async def get_reminder_strategy(
 async def mark_reminder_sent(
     reminder_id: int,
     db: aiosqlite.Connection = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
 ):
     """标记提醒已发送"""
     await db.execute(
-        "UPDATE reminders SET is_sent = 1 WHERE id = ?",
-        (reminder_id,)
+        """
+        UPDATE reminders
+        SET is_sent = 1
+        WHERE id = ? AND food_id IN (SELECT id FROM foods WHERE user_id = ?)
+        """,
+        (reminder_id, current_user["id"])
     )
     await db.commit()
     
@@ -199,15 +211,17 @@ async def mark_reminder_sent(
 async def get_reminder_history(
     limit: int = 50,
     db: aiosqlite.Connection = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
 ):
     """获取提醒历史"""
     cursor = await db.execute("""
         SELECT r.*, f.name as food_name
         FROM reminders r
         JOIN foods f ON r.food_id = f.id
+        WHERE f.user_id = ?
         ORDER BY r.remind_date DESC
         LIMIT ?
-    """, (limit,))
+    """, (current_user["id"], limit))
     
     rows = await cursor.fetchall()
     

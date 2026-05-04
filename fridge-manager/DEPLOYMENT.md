@@ -29,9 +29,17 @@ DASHSCOPE_API_KEY=你的 DashScope API Key
 QWEN_MODEL=qwen-plus
 QWEN_VL_MODEL=qwen-vl-max
 API_PUBLIC_BASE_URL=https://api.example.com
+WECHAT_APPID=你的小程序 AppID
+WECHAT_APP_SECRET=你的小程序 AppSecret
+AUTH_TOKEN_EXPIRE_DAYS=30
+ALLOW_DEV_LOGIN=false
 ```
 
 `API_PUBLIC_BASE_URL` 不要带 `/api/v1`，它用于生成上传图片的 HTTPS 公网地址。
+
+正式上线给多人使用时，`WECHAT_APPID` 和 `WECHAT_APP_SECRET` 必须填写。后端会用 `wx.login` 的 `code` 换取用户 `openid`，并按用户隔离冰箱数据。
+
+`ALLOW_DEV_LOGIN` 只允许本地开发时临时改成 `true`，正式服务器必须保持 `false`。
 
 ## 3. 配置小程序正式接口地址
 
@@ -92,6 +100,8 @@ server {
 逐项确认：
 
 - `https://api.example.com/health` 返回健康状态。
+- 小程序启动后 `/api/v1/auth/login` 能返回 token。
+- 两台手机登录后只能看到各自添加的食物。
 - 拍照识别可成功返回结果。
 - 上传图片返回的 `image_url` 是 `https://api.example.com/uploads/...`。
 - 首页、详情页不再出现 `<wx-image>` HTTP 警告。

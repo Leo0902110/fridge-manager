@@ -15,7 +15,7 @@ import uvicorn
 load_dotenv(Path(__file__).resolve().with_name(".env"))
 
 from app.db.database import init_db
-from app.api import foods, recognition, reminders
+from app.api import auth, foods, recognition, reminders
 
 
 @asynccontextmanager
@@ -65,6 +65,7 @@ uploads_dir.mkdir(parents=True, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=uploads_dir), name="uploads")
 
 # 注册路由
+app.include_router(auth.router, prefix="/api/v1/auth", tags=["用户登录"])
 app.include_router(foods.router, prefix="/api/v1/foods", tags=["食物管理"])
 app.include_router(recognition.router, prefix="/api/v1/recognition", tags=["AI 识别"])
 app.include_router(reminders.router, prefix="/api/v1/reminders", tags=["提醒通知"])

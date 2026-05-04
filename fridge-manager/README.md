@@ -69,7 +69,7 @@ QWEN_VL_MODEL=qwen-vl-max
 
 ### 正式上线
 
-正式版/体验版必须使用 HTTPS 后端域名，并在微信公众平台配置合法域名。完整步骤见 `DEPLOYMENT.md`。
+正式版/体验版必须使用 HTTPS 后端域名，并在微信公众平台配置合法域名。多人使用时还需要配置微信小程序登录，后端会按 `openid` 隔离每个用户的冰箱数据。完整步骤见 `DEPLOYMENT.md`。
 
 ### 百度 AI 开放平台（备用）
 1. 访问 https://ai.baidu.com/
