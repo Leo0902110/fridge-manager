@@ -9,6 +9,14 @@ const LOCATION_LABELS = {
   freezer: '冷冻',
   room: '常温',
 }
+const QUICK_FOODS = [
+  { name: '鸡蛋', category: '蛋类', location: 'fridge' },
+  { name: '牛奶', category: '乳制品', location: 'fridge' },
+  { name: '苹果', category: '水果', location: 'fridge' },
+  { name: '青菜', category: '蔬菜', location: 'fridge' },
+  { name: '猪肉', category: '肉类', location: 'freezer' },
+  { name: '剩菜', category: '剩菜', location: 'fridge' },
+]
 
 function defaultCategoryIndex(category) {
   const index = CATEGORIES.indexOf(category)
@@ -94,8 +102,10 @@ Page({
   data: {
     categories: CATEGORIES,
     categoryIndex: CATEGORIES.length - 1,
+    quickFoods: QUICK_FOODS,
 
     imagePath: '',
+    recognitionError: '',
     recognitionResults: [],
     wholeItem: null,
     entryMode: 'split',
@@ -104,7 +114,6 @@ Page({
     selectedCount: 0,
     editorVisible: false,
     decisionVisible: false,
-    decisionInfoOpen: false,
     decisionSource: '',
     decisionIndex: -1,
     decisionItem: null,
@@ -124,6 +133,8 @@ Page({
     manualShelfProfile: null,
     manualRecommendedLocation: '',
     manualStorageTip: '',
+    manualLookupLoading: false,
+    manualSuggestionReady: false,
     recognizing: false,
     submitting: false,
   },
@@ -135,6 +146,10 @@ Page({
 
   onShow() {
     this.updateTabBar()
+  },
+
+  onUnload() {
+    clearTimeout(this.manualLookupTimer)
   },
 
   noop() {},
@@ -151,63 +166,78 @@ Page({
       camera: 'back',
       success: async (res) => {
         const tempFilePath = res.tempFiles[0].tempFilePath
-        this.setData({
-          imagePath: tempFilePath,
-          recognitionResults: [],
-          wholeItem: null,
-          entryMode: 'split',
-          modeReason: '',
-          selectedItems: [],
-          selectedCount: 0,
-          autoShelfLife: null,
-          recognizing: true,
-        })
-        wx.showNavigationBarLoading()
-
-        wx.showLoading({ title: 'AI 识别中...' })
-        let errorMessage = ''
-        try {
-          const result = await api.recognition.recognizeImage(tempFilePath)
-          const results = (result.success && result.data ? result.data : []).map((item, index) => ({
-            ...item,
-            selected: result.mode !== 'whole',
-            sourceIndex: index,
-          }))
-          const wholeItem = result.whole_food ? buildSelectedItem(result.whole_food, -1, tempFilePath) : null
-          const shouldUseWhole = result.mode === 'whole' && wholeItem
-          const selectedItems = shouldUseWhole
-            ? [wholeItem]
-            : results.map((item, index) => buildSelectedItem(item, index, tempFilePath))
-
-          this.setData({
-            recognitionResults: results,
-            wholeItem,
-            entryMode: shouldUseWhole ? 'whole' : 'split',
-            modeReason: result.mode_reason || '',
-            selectedItems,
-            selectedCount: selectedItems.length,
-          })
-
-          if (selectedItems.length > 0) {
-            await this.fillShelfLifeForSelected()
-            this.openDecisionSheet(shouldUseWhole ? 'whole' : 'item', 0)
-          }
-        } catch (err) {
-          console.error('识别失败:', err)
-          errorMessage = err.message || '识别失败'
-        } finally {
-          this.setData({ recognizing: false })
-          wx.hideLoading()
-          wx.hideNavigationBarLoading()
-          if (errorMessage) {
-            wx.showToast({
-              title: errorMessage,
-              icon: 'none',
-            })
-          }
-        }
+        this.recognizeSelectedImage(tempFilePath)
       },
     })
+  },
+
+  async retryRecognition() {
+    if (!this.data.imagePath || this.data.recognizing || this.data.submitting) {
+      return
+    }
+    this.recognizeSelectedImage(this.data.imagePath)
+  },
+
+  async recognizeSelectedImage(imagePath) {
+    this.setData({
+      imagePath,
+      recognitionError: '',
+      recognitionResults: [],
+      wholeItem: null,
+      entryMode: 'split',
+      modeReason: '',
+      selectedItems: [],
+      selectedCount: 0,
+      autoShelfLife: null,
+      recognizing: true,
+    })
+    wx.showNavigationBarLoading()
+
+    wx.showLoading({ title: 'AI 识别中...' })
+    let errorMessage = ''
+    try {
+      const result = await api.recognition.recognizeImage(imagePath)
+      const results = (result.success && result.data ? result.data : []).map((item, index) => ({
+        ...item,
+        selected: result.mode !== 'whole',
+        sourceIndex: index,
+      }))
+      const wholeItem = result.whole_food ? buildSelectedItem(result.whole_food, -1, imagePath) : null
+      const shouldUseWhole = result.mode === 'whole' && wholeItem
+      const selectedItems = shouldUseWhole
+        ? [wholeItem]
+        : results.map((item, index) => buildSelectedItem(item, index, imagePath))
+
+      this.setData({
+        recognitionResults: results,
+        wholeItem,
+        entryMode: shouldUseWhole ? 'whole' : 'split',
+        modeReason: result.mode_reason || '',
+        selectedItems,
+        selectedCount: selectedItems.length,
+      })
+
+      if (selectedItems.length > 0) {
+        await this.fillShelfLifeForSelected()
+        this.openDecisionSheet(shouldUseWhole ? 'whole' : 'item', 0)
+      }
+    } catch (err) {
+      console.error('识别失败:', err)
+      errorMessage = err.message || '识别失败'
+    } finally {
+      this.setData({
+        recognizing: false,
+        recognitionError: errorMessage,
+      })
+      wx.hideLoading()
+      wx.hideNavigationBarLoading()
+      if (errorMessage) {
+        wx.showToast({
+          title: errorMessage,
+          icon: 'none',
+        })
+      }
+    }
   },
 
   switchEntryMode(e) {
@@ -359,7 +389,6 @@ Page({
 
     this.setData({
       decisionVisible: true,
-      decisionInfoOpen: false,
       decisionSource: source,
       decisionIndex: index,
       decisionItem: this.buildDecisionItem(item, source),
@@ -369,16 +398,9 @@ Page({
   closeDecisionSheet() {
     this.setData({
       decisionVisible: false,
-      decisionInfoOpen: false,
       decisionSource: '',
       decisionIndex: -1,
       decisionItem: null,
-    })
-  },
-
-  toggleDecisionInfo() {
-    this.setData({
-      decisionInfoOpen: !this.data.decisionInfoOpen,
     })
   },
 
@@ -587,6 +609,27 @@ Page({
     }
   },
 
+  scheduleManualShelfLifeLookup(value) {
+    clearTimeout(this.manualLookupTimer)
+    if (!value.trim()) {
+      this.setData({
+        autoShelfLife: null,
+        storageSuggestion: '',
+        manualShelfProfile: null,
+        manualRecommendedLocation: '',
+        manualStorageTip: '',
+        manualLookupLoading: false,
+        manualSuggestionReady: false,
+      })
+      return
+    }
+
+    this.setData({ manualLookupLoading: true })
+    this.manualLookupTimer = setTimeout(() => {
+      this.fillManualShelfLife()
+    }, 650)
+  },
+
   applyLocationShelfLife(location) {
     const updates = {}
     this.data.selectedItems.forEach((item, index) => {
@@ -611,7 +654,9 @@ Page({
       [`formData.${field}`]: value,
     })
     if (field === 'name' && value.trim()) {
-      this.fillManualShelfLife()
+      this.scheduleManualShelfLifeLookup(value)
+    } else if (field === 'name') {
+      this.scheduleManualShelfLifeLookup(value)
     }
   },
 
@@ -651,6 +696,47 @@ Page({
     if (this.data.formData.name.trim()) {
       this.fillManualShelfLife()
     }
+  },
+
+  fillQuickFood(e) {
+    if (this.data.submitting || this.data.recognizing) {
+      return
+    }
+
+    const index = Number(e.currentTarget.dataset.index)
+    const item = this.data.quickFoods[index]
+    if (!item) {
+      return
+    }
+
+    const categoryIndex = defaultCategoryIndex(item.category)
+    this.setData({
+      categoryIndex,
+      'formData.name': item.name,
+      'formData.category': item.category,
+      'formData.location': item.location,
+    })
+    this.fillManualShelfLife()
+  },
+
+  applyManualSuggestion() {
+    const name = this.data.formData.name.trim()
+    if (!name || !this.data.manualSuggestionReady) {
+      return
+    }
+
+    const location = this.data.manualRecommendedLocation || this.data.formData.location
+    const shelfLife = getShelfLifeByLocation(this.data.manualShelfProfile, location)
+      || this.data.formData.shelf_life_days
+      || getDefaultShelfLife(name, this.data.formData.category)
+      || 7
+
+    this.setData({
+      'formData.location': location,
+      'formData.shelf_life_days': String(shelfLife),
+      storageSuggestion: `${LOCATION_LABELS[location] || '冷藏'} · ${this.data.manualStorageTip || '按推荐方式保存'}`,
+    })
+    wx.showToast({ title: '已应用推荐', icon: 'success' })
   },
 
   onSelectedCategoryChange(e) {
@@ -705,6 +791,7 @@ Page({
     }
     const lookupSeq = (this.manualLookupSeq || 0) + 1
     this.manualLookupSeq = lookupSeq
+    this.setData({ manualLookupLoading: true })
 
     try {
       let category = this.data.formData.category
@@ -731,15 +818,17 @@ Page({
         const shelfRef = ref.data[0]
         const profile = buildShelfProfile(shelfRef)
         const shelfLife = getShelfLifeByLocation(profile, this.data.formData.location)
+        const recommendedLocation = shelfRef.recommended_location || this.data.formData.location
         this.setData({
           'formData.shelf_life_days': shelfLife ? String(shelfLife) : this.data.formData.shelf_life_days,
           autoShelfLife: shelfLife || null,
           manualShelfProfile: profile,
-          manualRecommendedLocation: shelfRef.recommended_location,
+          manualRecommendedLocation: recommendedLocation,
           manualStorageTip: shelfRef.storage_tip || '',
-          storageSuggestion: `${LOCATION_LABELS[shelfRef.recommended_location] || '冷藏'} · ${shelfRef.storage_tip || '按当前保存方式自动计算保质期'}`,
+          storageSuggestion: `${LOCATION_LABELS[recommendedLocation] || '冷藏'} · ${shelfLife || '--'}天`,
+          manualLookupLoading: false,
+          manualSuggestionReady: true,
         })
-        this.openDecisionSheet('manual')
       } else {
         const fallbackLocation = getDefaultLocation(name, category)
         const fallbackShelfLife = getDefaultShelfLife(name, category) || (category === '肉类' ? 3 : '')
@@ -749,14 +838,19 @@ Page({
           manualShelfProfile: null,
           manualRecommendedLocation: fallbackLocation,
           manualStorageTip: getDefaultStorageTip(name, category, fallbackLocation),
-          storageSuggestion: `${LOCATION_LABELS[fallbackLocation] || '冷藏'} · ${getDefaultStorageTip(name, category, fallbackLocation)}`,
+          storageSuggestion: `${LOCATION_LABELS[fallbackLocation] || '冷藏'}${fallbackShelfLife ? ` · ${fallbackShelfLife}天` : ''}`,
+          manualLookupLoading: false,
+          manualSuggestionReady: true,
         })
-        if (fallbackShelfLife) {
-          this.openDecisionSheet('manual')
-        }
       }
     } catch (err) {
       console.error('查询手动保质期失败:', err)
+      if (lookupSeq === this.manualLookupSeq) {
+        this.setData({
+          manualLookupLoading: false,
+          manualSuggestionReady: false,
+        })
+      }
     }
   },
 
@@ -820,9 +914,13 @@ Page({
           })
         }
       } else {
+        wx.showLoading({ title: this.data.imagePath ? '上传图片...' : '保存中...' })
+        const imageUrl = this.data.imagePath ? await this.uploadItemImage({ imagePath: this.data.imagePath }) : ''
+        wx.showLoading({ title: '保存中...' })
         const res = await api.food.create({
           name: this.data.formData.name.trim(),
           category: this.data.formData.category || '其他',
+          image_url: imageUrl,
           location: this.data.formData.location,
           shelf_life_days: parseInt(this.data.formData.shelf_life_days, 10),
           notes: this.data.formData.notes.trim(),
@@ -837,11 +935,19 @@ Page({
         icon: 'success',
       })
 
-      setTimeout(() => {
+      if (typeof app.markFoodListDirty === 'function') {
+        app.markFoodListDirty()
+      }
+      const goHome = () => {
         wx.switchTab({
           url: '/pages/index/index',
         })
-      }, 1200)
+      }
+      if (typeof app.scheduleNavigation === 'function') {
+        app.scheduleNavigation(goHome, 900)
+      } else {
+        setTimeout(goHome, 900)
+      }
     } catch (err) {
       console.error('添加失败:', err)
       wx.showToast({

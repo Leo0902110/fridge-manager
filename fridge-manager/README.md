@@ -81,13 +81,6 @@ BAIDU_SECRET_KEY=your_secret_key
 2. 申请订阅消息模板
 3. 配置模板 ID
 
-## 📱 UI 设计
-
-采用 iPhone 风格设计：
-- 圆角卡片
-- 柔和阴影
-- SF Pro 风格字体
-- 清新配色（蓝/绿/白）
 
 ## 📄 许可证
 MIT License

@@ -1,6 +1,9 @@
 // utils/api.js - API 调用封装
 
 const app = getApp()
+const DEFAULT_TIMEOUT = 10000
+const UPLOAD_TIMEOUT = 20000
+const RECOGNITION_TIMEOUT = 60000
 
 function cleanData(data = {}) {
   const cleaned = {}
@@ -13,41 +16,125 @@ function cleanData(data = {}) {
   return cleaned
 }
 
+function getApiBaseUrls() {
+  const urls = [
+    app.globalData.API_BASE_URL,
+    ...(app.globalData.API_BASE_URL_FALLBACKS || []),
+  ]
+  return urls.filter((url, index) => url && urls.indexOf(url) === index)
+}
+
+function rememberSuccessfulBaseUrl(baseUrl) {
+  if (baseUrl && app.globalData.API_BASE_URL !== baseUrl) {
+    app.globalData.API_BASE_URL = baseUrl
+    console.log('API base switched:', baseUrl)
+  }
+}
+
+function normalizeErrorMessage(data, fallback = '请求失败') {
+  if (typeof data?.detail === 'string') {
+    return data.detail
+  }
+  if (Array.isArray(data?.detail)) {
+    return data.detail.map(item => item.msg || item.message || JSON.stringify(item)).join('；')
+  }
+  return data?.message || fallback
+}
+
+function shouldRetryNetworkError(err, options = {}) {
+  const message = err.errMsg || ''
+  if (message.includes('timeout') && options.retryOnTimeout === false) {
+    return false
+  }
+  return true
+}
+
 /**
  * 基础请求封装
  */
 function request(url, options = {}) {
-  const fullUrl = `${app.globalData.API_BASE_URL}${url}`
+  const baseUrls = getApiBaseUrls()
   const data = cleanData(options.data || {})
-  console.log('API request:', fullUrl, data)
 
   return new Promise((resolve, reject) => {
-    wx.request({
-      url: fullUrl,
-      method: options.method || 'GET',
-      data,
-      header: {
-        'Content-Type': 'application/json',
-        ...options.header,
-      },
-      timeout: 10000,
-      success: (res) => {
-        if (res.statusCode >= 200 && res.statusCode < 300) {
-          resolve(res.data)
-        } else {
+    const tryRequest = (index = 0) => {
+      const baseUrl = baseUrls[index]
+      const fullUrl = `${baseUrl}${url}`
+      console.log('API request:', fullUrl, data)
+
+      wx.request({
+        url: fullUrl,
+        method: options.method || 'GET',
+        data,
+        header: {
+          'Content-Type': 'application/json',
+          ...options.header,
+        },
+        timeout: options.timeout || DEFAULT_TIMEOUT,
+        success: (res) => {
+          if (res.statusCode >= 200 && res.statusCode < 300) {
+            rememberSuccessfulBaseUrl(baseUrl)
+            resolve(res.data)
+          } else {
+            reject({
+              code: res.statusCode,
+              message: normalizeErrorMessage(res.data),
+            })
+          }
+        },
+        fail: (err) => {
+          if (index < baseUrls.length - 1 && shouldRetryNetworkError(err, options)) {
+            tryRequest(index + 1)
+            return
+          }
           reject({
-            code: res.statusCode,
-            message: typeof res.data?.detail === 'string' ? res.data.detail : (res.data?.message || '请求失败'),
+            code: 500,
+            message: `${err.errMsg || '网络错误'}：${fullUrl}`,
           })
-        }
-      },
-      fail: (err) => {
-        reject({
-          code: 500,
-          message: `${err.errMsg || '网络错误'}：${fullUrl}`,
-        })
-      },
-    })
+        },
+      })
+    }
+
+    tryRequest()
+  })
+}
+
+function uploadFileWithFallback(url, imagePath, options = {}) {
+  const baseUrls = getApiBaseUrls()
+  return new Promise((resolve, reject) => {
+    const tryUpload = (index = 0) => {
+      const baseUrl = baseUrls[index]
+      const fullUrl = `${baseUrl}${url}`
+
+      wx.uploadFile({
+        url: fullUrl,
+        filePath: imagePath,
+        name: options.name || 'image',
+        timeout: options.timeout || UPLOAD_TIMEOUT,
+        success: (res) => {
+          try {
+            const data = JSON.parse(res.data)
+            if (res.statusCode >= 200 && res.statusCode < 300 && data.success) {
+              rememberSuccessfulBaseUrl(baseUrl)
+              resolve(data)
+            } else {
+              reject({ message: normalizeErrorMessage(data, options.failMessage || '上传失败') })
+            }
+          } catch (e) {
+            reject({ message: options.parseMessage || '返回结果解析失败' })
+          }
+        },
+        fail: (err) => {
+          if (index < baseUrls.length - 1 && shouldRetryNetworkError(err, options)) {
+            tryUpload(index + 1)
+            return
+          }
+          reject({ message: `${err.errMsg || options.failMessage || '上传失败'}：${fullUrl}` })
+        },
+      })
+    }
+
+    tryUpload()
   })
 }
 
@@ -75,27 +162,10 @@ const foodAPI = {
 
   // 上传食物裁剪图
   uploadImage(imagePath) {
-    return new Promise((resolve, reject) => {
-      wx.uploadFile({
-        url: `${app.globalData.API_BASE_URL}/foods/upload-image`,
-        filePath: imagePath,
-        name: 'image',
-        success: (res) => {
-          try {
-            const data = JSON.parse(res.data)
-            if (data.success) {
-              resolve(data)
-            } else {
-              reject({ message: data.message || '图片上传失败' })
-            }
-          } catch (e) {
-            reject({ message: '图片上传结果解析失败' })
-          }
-        },
-        fail: (err) => {
-          reject({ message: err.errMsg || '图片上传失败' })
-        },
-      })
+    return uploadFileWithFallback('/foods/upload-image', imagePath, {
+      timeout: UPLOAD_TIMEOUT,
+      failMessage: '图片上传失败',
+      parseMessage: '图片上传结果解析失败',
     })
   },
   
@@ -110,6 +180,21 @@ const foodAPI = {
   // 删除食物
   delete(id) {
     return request(`/foods/${id}`, {
+      method: 'DELETE',
+    })
+  },
+
+  // 标记吃完/丢弃，并保留统计记录
+  complete(id, action = 'eat') {
+    return request(`/foods/${id}/complete`, {
+      method: 'POST',
+      data: { action },
+    })
+  },
+
+  // 撤销完成记录
+  deleteEvent(eventId) {
+    return request(`/foods/events/${eventId}`, {
       method: 'DELETE',
     })
   },
@@ -133,27 +218,11 @@ const foodAPI = {
 const recognitionAPI = {
   // 图片识别
   recognizeImage(imagePath) {
-    return new Promise((resolve, reject) => {
-      wx.uploadFile({
-        url: `${app.globalData.API_BASE_URL}/recognition/image`,
-        filePath: imagePath,
-        name: 'image',
-        success: (res) => {
-          try {
-            const data = JSON.parse(res.data)
-            if (data.success) {
-              resolve(data)
-            } else {
-              reject({ message: data.message || '识别失败' })
-            }
-          } catch (e) {
-            reject({ message: '解析失败' })
-          }
-        },
-        fail: (err) => {
-          reject({ message: err.errMsg || '上传失败' })
-        },
-      })
+    return uploadFileWithFallback('/recognition/image', imagePath, {
+      timeout: RECOGNITION_TIMEOUT,
+      retryOnTimeout: false,
+      failMessage: '识别失败',
+      parseMessage: '识别结果解析失败',
     })
   },
   

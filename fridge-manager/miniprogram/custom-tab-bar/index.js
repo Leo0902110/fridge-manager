@@ -40,6 +40,11 @@ Component({
         return
       }
 
+      const app = getApp()
+      if (app && typeof app.clearPendingNavigation === 'function') {
+        app.clearPendingNavigation()
+      }
+
       this.setData({
         selected: index,
         indicatorStyle: `transform: translateX(${index * 100}%);`

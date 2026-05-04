@@ -2,20 +2,17 @@
 <view class="container tab-page add-page">
   <text class="large-title">添加</text>
   <view class="page-summary-row">
-    <text class="page-subtitle page-subtitle-inline">拍一张照片，或者手动补充信息。</text>
     <text class="refresh-state {{recognizing || submitting ? 'loading' : ''}}">{{recognizing ? '识别中' : submitting ? '保存中' : '待输入'}}</text>
   </view>
 
   <view class="card capture-card">
     <view class="section-header capture-header">
-      <text class="section-title">拍照识别</text>
-      <text class="section-hint">{{recognizing ? '正在分析图片' : imagePath ? '已选择图片' : 'AI 自动填充'}}</text>
+      <text class="section-title">拍照</text>
     </view>
 
     <view class="camera-panel" bindtap="chooseImage" wx:if="{{!imagePath}}">
       <text class="camera-icon">📷</text>
-      <text class="camera-title">拍照或从相册选择</text>
-      <text class="camera-subtitle">识别结果会自动填入下方表单。</text>
+      <text class="camera-title">拍照 / 相册</text>
     </view>
 
     <view class="image-preview" wx:else>
@@ -26,24 +23,21 @@
         bindtap="chooseImage"
       />
       <view class="processing-banner" wx:if="{{recognizing}}">
-        <text class="processing-title">图片识别中</text>
-        <text class="processing-subtitle">正在提取名称、类别和参考保质期。</text>
-      </view>
-      <view class="preview-toolbar">
-        <button class="btn btn-outline preview-btn" bindtap="chooseImage" disabled="{{recognizing || submitting}}">重新选择</button>
+        <text class="processing-title">识别中</text>
       </view>
     </view>
   </view>
 
-  <view class="card empty-recognition-card" wx:if="{{imagePath && !recognizing && recognitionResults.length === 0}}">
-    <text class="empty-recognition-title">没有识别到明确结果</text>
-    <text class="empty-recognition-subtitle">你仍然可以直接手动填写信息并保存。</text>
+  <view class="card empty-recognition-card" wx:if="{{imagePath && !recognizing && recognitionResults.length === 0 && !wholeItem}}">
+    <text class="empty-recognition-title">{{recognitionError ? '识别失败' : '未识别'}}</text>
+    <view class="empty-recognition-actions">
+      <button class="mini-btn" bindtap="retryRecognition" disabled="{{recognizing || submitting}}">重新识别</button>
+    </view>
   </view>
 
   <view class="card entry-mode-card" wx:if="{{wholeItem && recognitionResults.length > 0}}">
     <view class="section-header result-header">
       <text class="section-title">入库方式</text>
-      <text class="section-hint">{{modeReason || '按当前图片推荐'}}</text>
     </view>
     <view class="entry-mode-switch">
       <view
@@ -52,7 +46,6 @@
         data-mode="whole"
       >
         <text class="entry-mode-title">整份熟食</text>
-        <text class="entry-mode-subtitle">一条记录，默认 2 天</text>
       </view>
       <view
         class="entry-mode-option {{entryMode === 'split' ? 'active' : ''}}"
@@ -60,7 +53,6 @@
         data-mode="split"
       >
         <text class="entry-mode-title">拆分食材</text>
-        <text class="entry-mode-subtitle">多条记录，逐项管理</text>
       </view>
     </view>
   </view>
@@ -92,8 +84,7 @@
 
   <view class="card selected-editor-card" wx:if="{{selectedItems.length > 0}}">
     <view class="section-header form-header">
-      <text class="section-title">入库清单</text>
-      <text class="section-hint">{{entryMode === 'whole' ? '按整份保存' : '确认后批量入库'}}</text>
+      <text class="section-title">清单</text>
     </view>
 
     <scroll-view class="selected-scroll" scroll-y>
@@ -114,36 +105,52 @@
             <text class="selected-badge">{{index + 1}}</text>
             <text class="selected-title">{{item.name || '待命名'}}</text>
           </view>
-          <view class="selected-meta-row">
+          <view class="selected-summary">
             <text class="selected-meta">{{item.category}}</text>
             <text class="selected-dot">·</text>
             <text class="selected-meta">{{item.shelf_life_days || '--'}} 天</text>
-            <text class="selected-image-chip {{item.imagePath ? 'done' : ''}}">{{item.imagePath ? '局部图' : '原图'}}</text>
-          </view>
-          <view class="selected-meta-row" wx:if="{{item.recommended_location || item.storage_tip}}">
-            <text class="selected-storage-chip">建议{{getLocationText(item.recommended_location)}}</text>
-            <text class="selected-storage-tip">{{item.storage_tip}}</text>
+            <block wx:if="{{item.recommended_location}}">
+              <text class="selected-dot">·</text>
+              <text class="selected-meta">{{getLocationText(item.recommended_location)}}</text>
+            </block>
           </view>
         </view>
         <view class="selected-actions">
-          <button class="mini-icon-btn danger" catchtap="removeSelectedItem" data-index="{{index}}" disabled="{{submitting}}">×</button>
-          <text class="selected-chevron">›</text>
+          <view class="selected-delete-btn" catchtap="removeSelectedItem" data-index="{{index}}">×</view>
         </view>
       </view>
     </scroll-view>
   </view>
 
+  <view class="card quick-add-card" wx:if="{{selectedItems.length === 0 && !imagePath}}">
+    <view class="section-header quick-add-header">
+      <text class="section-title">常用</text>
+    </view>
+    <view class="quick-food-grid">
+      <view
+        class="quick-food-chip"
+        wx:for="{{quickFoods}}"
+        wx:key="name"
+        bindtap="fillQuickFood"
+        data-index="{{index}}"
+      >
+        <text class="quick-food-icon">{{getCategoryIcon(item.category)}}</text>
+        <text class="quick-food-name">{{item.name}}</text>
+      </view>
+    </view>
+  </view>
+
   <view class="card">
     <view class="section-header form-header">
-      <text class="section-title">{{selectedItems.length > 0 ? '统一设置' : '食物信息'}}</text>
+      <text class="section-title">{{selectedItems.length > 0 ? '设置' : '信息'}}</text>
     </view>
 
     <view class="field-group">
       <view class="field-row" wx:if="{{selectedItems.length === 0}}">
-        <text class="field-label">食物名称</text>
+        <text class="field-label">名称</text>
         <input
           class="field-control"
-          placeholder="请输入食物名称"
+          placeholder="名称"
           value="{{formData.name}}"
           bindinput="onInputChange"
           data-field="name"
@@ -152,7 +159,7 @@
       </view>
 
       <view class="field-row" wx:if="{{selectedItems.length === 0}}">
-        <text class="field-label">食物类别</text>
+        <text class="field-label">类别</text>
         <picker
           mode="selector"
           range="{{categories}}"
@@ -168,7 +175,7 @@
       </view>
 
       <view class="field-row">
-        <text class="field-label">存放位置</text>
+        <text class="field-label">位置</text>
         <view class="pill-group">
           <view
             class="pill-option {{formData.location === 'fridge' ? 'active' : ''}}"
@@ -196,34 +203,34 @@
           </view>
         </view>
         <view class="storage-advice" wx:if="{{selectedItems.length > 0}}">
-          <text class="storage-advice-title">保质期会按当前存放位置自动切换</text>
-          <text class="storage-advice-text">已选食物会优先使用各自的推荐方式和参考天数。</text>
+          <text class="storage-advice-text">按位置计算</text>
         </view>
         <view class="storage-advice" wx:elif="{{storageSuggestion}}">
-          <text class="storage-advice-title">推荐保存</text>
-          <text class="storage-advice-text">{{storageSuggestion}}</text>
+          <text class="storage-advice-text">{{manualLookupLoading ? '查询中...' : storageSuggestion}}</text>
+          <view class="storage-advice-actions" wx:if="{{manualSuggestionReady}}">
+            <button class="advice-action" bindtap="applyManualSuggestion" disabled="{{submitting}}">应用</button>
+          </view>
         </view>
       </view>
 
       <view class="field-row" wx:if="{{selectedItems.length === 0}}">
-        <text class="field-label">保质期（天）</text>
+        <text class="field-label">天数</text>
         <input
           class="field-control"
           type="number"
-          placeholder="自动识别或手动输入"
+          placeholder="天数"
           value="{{formData.shelf_life_days}}"
           bindinput="onInputChange"
           data-field="shelf_life_days"
           disabled="{{submitting}}"
         />
-        <text class="field-helper" wx:if="{{autoShelfLife}}">建议值：{{autoShelfLife}} 天</text>
       </view>
 
       <view class="field-row" wx:if="{{selectedItems.length === 0}}">
         <text class="field-label">备注</text>
         <textarea
           class="field-textarea"
-          placeholder="可选，例如品牌、购买地点等"
+          placeholder="可选"
           value="{{formData.notes}}"
           bindinput="onInputChange"
           data-field="notes"
@@ -239,12 +246,11 @@
     class="btn btn-primary submit-btn"
     bindtap="submitFood"
     disabled="{{submitting || recognizing}}"
-  >{{recognizing ? '识别中...' : submitting ? '保存中...' : '保存到冰箱'}}</button>
+  >{{recognizing ? '识别中...' : submitting ? '保存中...' : '保存'}}</button>
 
   <view class="batch-bar" wx:if="{{selectedItems.length > 0}}">
     <view class="batch-info">
       <text class="batch-count">已选 {{selectedItems.length}} 项</text>
-      <text class="batch-caption">{{entryMode === 'whole' ? '整份熟食默认使用原图' : '可点开单项编辑或调整图片'}}</text>
     </view>
     <button
       class="batch-submit"
@@ -258,10 +264,8 @@
       <view class="editor-handle"></view>
       <view class="editor-header">
         <view>
-          <text class="editor-title">编辑食物</text>
-          <text class="editor-subtitle">确认名称、保质期和对应图片</text>
+          <text class="editor-title">编辑</text>
         </view>
-        <button class="mini-icon-btn" bindtap="closeItemEditor">×</button>
       </view>
 
       <view class="editor-preview-row">
@@ -271,16 +275,14 @@
           <text wx:else class="selected-thumb-icon">{{getCategoryIcon(editDraft.category)}}</text>
         </view>
         <view class="editor-preview-main">
-          <text class="editor-preview-title">{{editDraft.imagePath ? '已使用裁剪图' : '当前使用原图'}}</text>
-          <text class="editor-preview-caption">默认可直接用原图；需要更准确时再裁剪。</text>
-          <text class="editor-preview-caption" wx:if="{{editDraft.storage_tip}}">建议{{getLocationText(editDraft.recommended_location)}}：{{editDraft.storage_tip}}</text>
-          <button class="mini-btn editor-crop-btn" bindtap="cropEditingImage" disabled="{{submitting || !imagePath}}">调整图片区域</button>
+          <text class="editor-preview-title">{{editDraft.imagePath ? '局部图' : '原图'}}</text>
+          <button class="mini-btn editor-crop-btn" bindtap="cropEditingImage" disabled="{{submitting || !imagePath}}">裁剪</button>
         </view>
       </view>
 
       <view class="field-group editor-fields">
         <view class="field-row">
-          <text class="field-label">食物名称</text>
+          <text class="field-label">名称</text>
           <input
             class="field-control"
             value="{{editDraft.name}}"
@@ -307,7 +309,7 @@
         </view>
 
         <view class="field-row">
-          <text class="field-label">保质期（天）</text>
+          <text class="field-label">天数</text>
           <input
             class="field-control"
             type="number"
@@ -344,11 +346,8 @@
       <view class="editor-handle"></view>
       <view class="decision-header">
         <view>
-          <text class="decision-kicker">{{decisionSource === 'whole' ? '看起来是一份熟食' : '智能入库建议'}}</text>
           <text class="decision-title">{{decisionItem.name}}</text>
-          <text class="decision-subtitle">{{decisionItem.category}} · 建议{{getLocationText(decisionItem.recommended_location)}}</text>
         </view>
-        <button class="decision-info-btn" bindtap="toggleDecisionInfo">i</button>
       </view>
 
       <image class="decision-image" wx:if="{{imagePath && decisionSource !== 'manual'}}" src="{{imagePath}}" mode="aspectFill" />
@@ -381,18 +380,14 @@
       </view>
 
       <view class="decision-expiry">
-        <text class="decision-expiry-label">预计到期日</text>
+        <text class="decision-expiry-label">到期</text>
         <text class="decision-expiry-date">{{decisionItem.expiryPreview || '待确认'}}</text>
       </view>
 
-      <view class="decision-explain" wx:if="{{decisionInfoOpen}}">
-        <text>{{decisionItem.storage_tip || '参考食物类别和当前保存位置计算。'}}</text>
-      </view>
-
       <button class="btn btn-primary decision-primary" bindtap="confirmDecision">
-        {{decisionSource === 'whole' ? '整份入库' : '按推荐确认'}}
+        {{decisionSource === 'whole' ? '整份入库' : '确认'}}
       </button>
-      <button class="decision-secondary" wx:if="{{wholeItem}}" bindtap="switchEntryMode" data-mode="split">我要拆分成单独食材</button>
+      <button class="decision-secondary" wx:if="{{wholeItem}}" bindtap="switchEntryMode" data-mode="split">拆分</button>
     </view>
   </view>
 </view>

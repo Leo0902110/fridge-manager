@@ -61,7 +61,6 @@ Page({
       fresh_count: 0,
       warning_count: 0,
       expired_count: 0,
-      warning_foods: [],
     },
     foodList: [],
     actionFoods: [],
@@ -74,6 +73,7 @@ Page({
     undoVisible: false,
     undoText: '',
     undoFood: null,
+    undoEventId: null,
     touchStartX: 0,
     filter: 'all',
     loading: false,
@@ -87,9 +87,14 @@ Page({
   },
 
   onShow() {
-    // 每次显示时刷新数据
     this.updateTabBar()
-    this.loadData()
+    const dirty = typeof app.consumeFoodListDirty === 'function'
+      ? app.consumeFoodListDirty()
+      : !!app.globalData.foodListDirty
+    const isStale = !this.lastLoadAt || Date.now() - this.lastLoadAt > 30000
+    if (!this.data.initialized || dirty || isStale) {
+      this.loadData({ silent: this.data.initialized && !dirty })
+    }
   },
 
   onPullDownRefresh() {
@@ -102,27 +107,30 @@ Page({
    * 加载数据
    */
   async loadData(options = {}) {
-    const { refresh = false } = options
+    const { refresh = false, silent = false } = options
 
     this.setData({
-      loading: true,
+      loading: !silent,
       refreshing: refresh,
       lastUpdatedText: refresh ? '刷新中' : '正在同步',
     })
-    wx.showNavigationBarLoading()
+    if (!silent) {
+      wx.showNavigationBarLoading()
+    }
     
     try {
-      // 加载概览统计
-      const overviewRes = await api.food.overview()
+      const listParams = this.data.filter === 'warning' ? { status: 'warning' } : {}
+      const [overviewRes, listRes] = await Promise.all([
+        api.food.overview(),
+        api.food.list(listParams),
+      ])
+
       if (overviewRes.success) {
         this.setData({
           stats: overviewRes.data,
         })
       }
       
-      // 加载食物列表
-      const listParams = this.data.filter === 'warning' ? { status: 'warning' } : {}
-      const listRes = await api.food.list(listParams)
       if (listRes.success) {
         const foodList = listRes.data
           .map((food) => {
@@ -140,7 +148,7 @@ Page({
           })
 
         const expiredFoods = foodList.filter(food => food.riskType === 'expired')
-        const actionFoods = foodList.filter(food => food.riskType === 'warning' || (isCookedFood(food) && food.location === 'fridge'))
+        const actionFoods = foodList.filter(food => food.riskType === 'warning' || (food.riskType !== 'expired' && isCookedFood(food) && food.location === 'fridge'))
         const activeColdList = foodList.filter(food => food.location !== 'freezer')
         const freezerList = foodList.filter(food => food.location === 'freezer')
         const filteredInventory = this.filterInventory(this.data.inventoryZone, this.data.quickFilter, activeColdList, freezerList)
@@ -159,6 +167,7 @@ Page({
         initialized: true,
         lastUpdatedText: `刚刚更新`,
       })
+      this.lastLoadAt = Date.now()
     } catch (err) {
       console.error('加载数据失败:', err)
       this.setData({
@@ -171,7 +180,9 @@ Page({
       })
     } finally {
       this.setData({ loading: false, refreshing: false })
-      wx.hideNavigationBarLoading()
+      if (!silent) {
+        wx.hideNavigationBarLoading()
+      }
     }
   },
 
@@ -234,16 +245,17 @@ Page({
     }
 
     try {
-      await api.food.delete(id)
+      const completeRes = await api.food.complete(id, type === 'discard' ? 'discard' : 'eat')
       const verb = type === 'discard' ? '丢弃' : '吃完'
       this.setData({
         undoVisible: true,
         undoText: `已记录${verb}${food.name}`,
         undoFood: food,
+        undoEventId: completeRes.data ? completeRes.data.event_id : null,
       })
       clearTimeout(this.undoTimer)
       this.undoTimer = setTimeout(() => {
-        this.setData({ undoVisible: false, undoFood: null })
+        this.setData({ undoVisible: false, undoFood: null, undoEventId: null })
       }, 3000)
       this.loadData()
     } catch (err) {
@@ -252,7 +264,7 @@ Page({
   },
 
   async undoLastAction() {
-    const food = this.data.undoFood
+    const { undoFood: food, undoEventId } = this.data
     if (!food) {
       return
     }
@@ -267,7 +279,10 @@ Page({
         shelf_life_days: food.shelf_life_days,
         notes: food.notes || '',
       })
-      this.setData({ undoVisible: false, undoFood: null })
+      if (undoEventId) {
+        await api.food.deleteEvent(undoEventId)
+      }
+      this.setData({ undoVisible: false, undoFood: null, undoEventId: null })
       this.loadData()
     } catch (err) {
       wx.showToast({ title: err.message || '撤销失败', icon: 'none' })
@@ -306,22 +321,6 @@ Page({
    */
   formatDate(dateStr) {
     return app.formatDate(dateStr)
-  },
-
-  /**
-   * 计算剩余天数
-   */
-  calcDaysLeft(expiryDate) {
-    return app.calcDaysLeft(expiryDate)
-  },
-
-  /**
-   * 计算剩余天数（用于临期提醒）
-   */
-  daysLeft(expiryDate) {
-    const result = app.calcDaysLeft(expiryDate)
-    const match = result.text.match(/(\d+)/)
-    return match ? match[1] : '0'
   },
 
   updateTabBar() {

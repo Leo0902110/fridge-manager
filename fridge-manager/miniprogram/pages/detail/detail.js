@@ -128,6 +128,9 @@ Page({
           food,
           daysResult: app.calcDaysLeft(food.expiry_date),
         })
+        if (typeof app.markFoodListDirty === 'function') {
+          app.markFoodListDirty()
+        }
       }
     } catch (err) {
       wx.showToast({ title: err.message || '更新失败', icon: 'none' })
@@ -135,17 +138,6 @@ Page({
       this.setData({ actingType: '' })
       wx.hideNavigationBarLoading()
     }
-  },
-
-  /**
-   * 编辑食物
-   */
-  editFood() {
-    if (this.data.actingType || this.data.loading) {
-      return
-    }
-
-    wx.showToast({ title: '可直接切换保存方式', icon: 'none' })
   },
 
   /**
@@ -165,6 +157,9 @@ Page({
           wx.showNavigationBarLoading()
           try {
             await api.food.delete(this.data.foodId)
+            if (typeof app.markFoodListDirty === 'function') {
+              app.markFoodListDirty()
+            }
             wx.showToast({
               title: '删除成功',
               icon: 'success',
@@ -202,16 +197,24 @@ Page({
           this.setData({ actingType: 'eat' })
           wx.showNavigationBarLoading()
           try {
-            await api.food.delete(this.data.foodId)
+            await api.food.complete(this.data.foodId, 'eat')
+            if (typeof app.markFoodListDirty === 'function') {
+              app.markFoodListDirty()
+            }
             wx.showToast({
               title: '✅ 已记录',
               icon: 'success',
             })
-            setTimeout(() => {
+            const goHome = () => {
               wx.switchTab({
                 url: '/pages/index/index',
               })
-            }, 1500)
+            }
+            if (typeof app.scheduleNavigation === 'function') {
+              app.scheduleNavigation(goHome, 900)
+            } else {
+              setTimeout(goHome, 900)
+            }
           } catch (err) {
             this.setData({ actingType: '' })
             wx.showToast({

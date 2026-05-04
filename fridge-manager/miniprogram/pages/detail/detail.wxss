@@ -209,6 +209,10 @@
   color: var(--text-primary);
 }
 
+.detail-delete-btn {
+  margin-bottom: 20rpx;
+}
+
 @keyframes shimmer {
   100% {
     transform: translateX(100%);

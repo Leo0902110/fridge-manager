@@ -43,6 +43,39 @@ async def init_db():
     """)
     
     # 食物状态：fresh(新鲜), warning(临期), expired(过期)
+    await db.execute("""
+        CREATE TABLE IF NOT EXISTS food_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            food_id INTEGER,
+            event_type TEXT NOT NULL,
+            name TEXT NOT NULL,
+            category TEXT,
+            image_url TEXT,
+            put_date DATE,
+            expiry_date DATE,
+            shelf_life_days INTEGER,
+            location TEXT,
+            notes TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    cursor = await db.execute("PRAGMA table_info(food_events)")
+    event_columns = {row["name"] for row in await cursor.fetchall()}
+    event_column_defs = {
+        "food_id": "INTEGER",
+        "event_type": "TEXT",
+        "name": "TEXT",
+        "category": "TEXT",
+        "image_url": "TEXT",
+        "put_date": "DATE",
+        "expiry_date": "DATE",
+        "shelf_life_days": "INTEGER",
+        "location": "TEXT",
+        "notes": "TEXT",
+    }
+    for column_name, column_type in event_column_defs.items():
+        if column_name not in event_columns:
+            await db.execute(f"ALTER TABLE food_events ADD COLUMN {column_name} {column_type}")
     
     # 提醒表
     await db.execute("""

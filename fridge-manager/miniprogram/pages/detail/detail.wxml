@@ -31,7 +31,7 @@
   <text class="large-title">{{food.name}}</text>
   <view class="page-summary-row">
     <text class="page-subtitle page-subtitle-inline">{{food.category}} · {{getLocationText(food.location)}}</text>
-    <text class="refresh-state {{actingType ? 'loading' : ''}}">{{actingType === 'delete' ? '删除中' : actingType === 'eat' ? '处理中' : '已同步'}}</text>
+    <text class="refresh-state {{actingType ? 'loading' : ''}}" wx:if="{{actingType}}">{{actingType === 'delete' ? '删除中' : '处理中'}}</text>
   </view>
 
   <view class="card summary-card">
@@ -48,18 +48,14 @@
     </view>
 
     <view class="summary-bottom">
-      <text class="summary-label">预计到期</text>
+      <text class="summary-label">到期</text>
       <text class="summary-date">{{food.expiry_date}}</text>
     </view>
   </view>
 
-  <view class="section-header detail-section-header">
-    <text class="section-title">基本信息</text>
-  </view>
   <view class="card location-recalc-card">
     <view class="section-header location-recalc-header">
       <text class="section-title">保存方式</text>
-      <text class="section-hint">切换后自动重算到期日</text>
     </view>
     <view class="location-options">
       <view class="location-option {{food.location === 'fridge' ? 'active' : ''}}" bindtap="changeLocation" data-location="fridge">
@@ -81,22 +77,19 @@
   <view class="list-group">
     <view class="list-cell">
       <view class="list-main">
-        <text class="list-title">存放位置</text>
-        <text class="list-subtitle">当前保存方式</text>
+        <text class="list-title">位置</text>
       </view>
       <text class="row-value">{{getLocationText(food.location)}}</text>
     </view>
     <view class="list-cell">
       <view class="list-main">
         <text class="list-title">放入日期</text>
-        <text class="list-subtitle">进入冰箱的时间</text>
       </view>
       <text class="row-value">{{food.put_date}}</text>
     </view>
     <view class="list-cell">
       <view class="list-main">
         <text class="list-title">保质期</text>
-        <text class="list-subtitle">系统按此计算到期时间</text>
       </view>
       <text class="row-value">{{food.shelf_life_days}} 天</text>
     </view>
@@ -109,12 +102,9 @@
     <text class="notes-text">{{food.notes}}</text>
   </view>
 
-  <view class="action-row">
-    <button class="btn btn-outline half-btn" bindtap="editFood" disabled="{{!!actingType}}">编辑</button>
-    <button class="btn btn-danger half-btn" bindtap="deleteFood" disabled="{{!!actingType}}">{{actingType === 'delete' ? '删除中...' : '删除'}}</button>
-  </view>
+  <button class="btn btn-danger detail-delete-btn" bindtap="deleteFood" disabled="{{!!actingType}}">{{actingType === 'delete' ? '删除中...' : '删除'}}</button>
 
-  <button class="btn btn-success" bindtap="markAsEaten" disabled="{{!!actingType}}">{{actingType === 'eat' ? '处理中...' : '标记为已吃完'}}</button>
+  <button class="btn btn-success" bindtap="markAsEaten" disabled="{{!!actingType}}">{{actingType === 'eat' ? '处理中...' : '吃完'}}</button>
 </view>
 <view class="container" wx:else>
   <view class="loading card">

@@ -1,13 +1,11 @@
 <!--pages/settings/settings.wxml - 设置页面-->
 <view class="container tab-page">
   <text class="large-title">设置</text>
-  <text class="page-subtitle">应用信息、统计和支持入口。</text>
 
   <view class="card profile-card">
     <view class="profile-avatar">冰</view>
     <view class="profile-main">
       <text class="profile-name">冰箱管家</text>
-      <text class="profile-desc">更清楚地知道家里还有什么，什么时候该吃。</text>
     </view>
   </view>
 
@@ -39,7 +37,6 @@
       <view class="item-leading blue">i</view>
       <view class="list-main">
         <text class="list-title">关于</text>
-        <text class="list-subtitle">查看产品简介与能力说明</text>
       </view>
       <text class="chevron">›</text>
     </view>
@@ -47,7 +44,6 @@
       <view class="item-leading green">↻</view>
       <view class="list-main">
         <text class="list-title">检查更新</text>
-        <text class="list-subtitle">确认当前是否为最新版本</text>
       </view>
       <text class="chevron">›</text>
     </view>
@@ -61,7 +57,6 @@
       <view class="item-leading orange">✉</view>
       <view class="list-main">
         <text class="list-title">意见反馈</text>
-        <text class="list-subtitle">告诉我们哪里还可以改进</text>
       </view>
       <text class="chevron">›</text>
     </view>
@@ -69,7 +64,7 @@
       <view class="item-leading gray">@</view>
       <view class="list-main">
         <text class="list-title">联系我们</text>
-        <text class="list-subtitle">support@fridgemanager.com</text>
+        <text class="list-subtitle">981391948@qq.com</text>
       </view>
       <text class="chevron">›</text>
     </view>

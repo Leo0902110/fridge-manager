@@ -1,6 +1,7 @@
 // app.js
 const DEVTOOLS_API_BASE_URL = 'http://127.0.0.1:8000/api/v1'
-const LAN_API_BASE_URL = 'http://192.168.31.107:8000/api/v1'
+const LOCALHOST_API_BASE_URL = 'http://localhost:8000/api/v1'
+const LAN_API_BASE_URL = 'http://192.168.1.250:8000/api/v1'
 
 App({
   onLaunch() {
@@ -27,15 +28,46 @@ App({
       })
     }
   },
+
+  clearPendingNavigation() {
+    if (this.pendingNavigationTimer) {
+      clearTimeout(this.pendingNavigationTimer)
+      this.pendingNavigationTimer = null
+    }
+  },
+
+  scheduleNavigation(callback, delay = 0) {
+    this.clearPendingNavigation()
+    this.pendingNavigationTimer = setTimeout(() => {
+      this.pendingNavigationTimer = null
+      if (typeof callback === 'function') {
+        callback()
+      }
+    }, delay)
+  },
+
+  markFoodListDirty() {
+    this.globalData.foodListDirty = true
+  },
+
+  consumeFoodListDirty() {
+    const dirty = !!this.globalData.foodListDirty
+    this.globalData.foodListDirty = false
+    return dirty
+  },
   
   globalData: {
     // API 基础地址（开发时改为你的后端地址）
     API_BASE_URL: wx.getSystemInfoSync().platform === 'devtools'
       ? DEVTOOLS_API_BASE_URL
       : LAN_API_BASE_URL,
+    API_BASE_URL_FALLBACKS: wx.getSystemInfoSync().platform === 'devtools'
+      ? [LOCALHOST_API_BASE_URL, LAN_API_BASE_URL]
+      : [DEVTOOLS_API_BASE_URL, LOCALHOST_API_BASE_URL],
     
     // 用户信息
     userInfo: null,
+    foodListDirty: false,
     
     // 食物类别映射
     foodCategories: {

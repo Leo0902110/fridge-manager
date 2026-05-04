@@ -28,7 +28,8 @@ Page({
       const res = await api.food.overview()
       if (res.success) {
         this.setData({
-          'stats.totalFoods': res.data.total,
+          'stats.totalFoods': res.data.total_created_count || res.data.total,
+          'stats.eatenCount': res.data.eaten_count || 0,
           'stats.wasteCount': res.data.expired_count,
         })
       }

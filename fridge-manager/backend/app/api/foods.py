@@ -2,7 +2,7 @@
 食物管理 API
 """
 
-from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Request
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Request, Body
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Optional
@@ -301,6 +301,68 @@ async def delete_food(
     return {"success": True, "message": "删除成功"}
 
 
+@router.post("/{food_id}/complete")
+async def complete_food(
+    food_id: int,
+    payload: dict = Body(default={}),
+    db: aiosqlite.Connection = Depends(get_db),
+):
+    """标记食物已处理，并保留一条历史事件用于统计。"""
+    event_type = payload.get("action", "eat")
+    if event_type not in ("eat", "discard"):
+        raise HTTPException(status_code=422, detail="无效的完成类型")
+
+    cursor = await db.execute("SELECT * FROM foods WHERE id = ?", (food_id,))
+    row = await cursor.fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="食物不存在")
+
+    cursor = await db.execute(
+        """
+        INSERT INTO food_events (
+            food_id, event_type, name, category, image_url, put_date,
+            expiry_date, shelf_life_days, location, notes
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            row["id"],
+            event_type,
+            row["name"],
+            row["category"],
+            row["image_url"],
+            row["put_date"],
+            row["expiry_date"],
+            row["shelf_life_days"],
+            row["location"],
+            row["notes"],
+        ),
+    )
+    event_id = cursor.lastrowid
+
+    await db.execute("DELETE FROM foods WHERE id = ?", (food_id,))
+    await db.commit()
+
+    return {
+        "success": True,
+        "data": {"event_id": event_id, "event_type": event_type},
+        "message": "已记录",
+    }
+
+
+@router.delete("/events/{event_id}")
+async def delete_food_event(
+    event_id: int,
+    db: aiosqlite.Connection = Depends(get_db),
+):
+    """撤销完成事件。"""
+    cursor = await db.execute("DELETE FROM food_events WHERE id = ?", (event_id,))
+    await db.commit()
+    if cursor.rowcount == 0:
+        raise HTTPException(status_code=404, detail="记录不存在")
+    return {"success": True, "message": "已撤销"}
+
+
 @router.get("/stats/overview")
 async def get_overview(
     db: aiosqlite.Connection = Depends(get_db),
@@ -319,6 +381,15 @@ async def get_overview(
         GROUP BY status
     """)
     status_counts = {row["status"]: row["count"] for row in await cursor.fetchall()}
+
+    cursor = await db.execute("""
+        SELECT event_type, COUNT(*) as count
+        FROM food_events
+        GROUP BY event_type
+    """)
+    event_counts = {row["event_type"]: row["count"] for row in await cursor.fetchall()}
+    eaten_count = event_counts.get("eat", 0)
+    discarded_count = event_counts.get("discard", 0)
     
     # 临期食物（3 天内过期）
     cursor = await db.execute("""
@@ -335,6 +406,9 @@ async def get_overview(
             "fresh_count": status_counts.get("fresh", 0),
             "warning_count": status_counts.get("warning", 0),
             "expired_count": status_counts.get("expired", 0),
+            "eaten_count": eaten_count,
+            "discarded_count": discarded_count,
+            "total_created_count": total + eaten_count + discarded_count,
             "warning_foods": warning_foods,
         }
     }

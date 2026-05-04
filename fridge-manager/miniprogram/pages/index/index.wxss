@@ -3,12 +3,8 @@
 .page-summary-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   margin-bottom: 32rpx;
-}
-
-.page-subtitle-inline {
-  margin-bottom: 0;
 }
 
 .refresh-state {
@@ -167,10 +163,6 @@
   color: var(--text-secondary);
 }
 
-.section-block {
-  margin-bottom: 16rpx;
-}
-
 .action-dashboard {
   padding: 28rpx;
   background: #FFFFFF;
@@ -246,12 +238,6 @@
   color: #1F7A3B;
 }
 
-.zero-waste-text {
-  display: block;
-  font-size: 24rpx;
-  color: var(--text-secondary);
-}
-
 .section-header {
   display: flex;
   justify-content: space-between;
@@ -268,10 +254,6 @@
 
 .inventory-header {
   align-items: flex-end;
-}
-
-.inventory-hint {
-  margin-top: 6rpx;
 }
 
 .countdown-chip {
@@ -461,13 +443,6 @@
   align-items: flex-end;
   flex-shrink: 0;
   margin-left: 18rpx;
-}
-
-.risk-date {
-  margin-bottom: 8rpx;
-  font-size: 24rpx;
-  font-weight: 600;
-  color: rgba(17, 17, 17, 0.62);
 }
 
 .risk-countdown {
