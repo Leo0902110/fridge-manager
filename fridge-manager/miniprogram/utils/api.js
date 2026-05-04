@@ -24,6 +24,23 @@ function getApiBaseUrls() {
   return urls.filter((url, index) => url && urls.indexOf(url) === index)
 }
 
+function isPlaceholderApiUrl(url) {
+  return typeof url === 'string' && /your-domain\.com|example\.com/.test(url)
+}
+
+function rejectUnconfiguredApi(reject) {
+  const baseUrls = getApiBaseUrls()
+  if (!baseUrls.length) {
+    reject({ code: 500, message: '后端地址未配置' })
+    return true
+  }
+  if (baseUrls.every(isPlaceholderApiUrl)) {
+    reject({ code: 500, message: '正式后端域名还没配置，请先修改 miniprogram/app.js 的 PRODUCTION_API_BASE_URL' })
+    return true
+  }
+  return false
+}
+
 function rememberSuccessfulBaseUrl(baseUrl) {
   if (baseUrl && app.globalData.API_BASE_URL !== baseUrl) {
     app.globalData.API_BASE_URL = baseUrl
@@ -53,10 +70,14 @@ function shouldRetryNetworkError(err, options = {}) {
  * 基础请求封装
  */
 function request(url, options = {}) {
-  const baseUrls = getApiBaseUrls()
+  const baseUrls = getApiBaseUrls().filter(baseUrl => !isPlaceholderApiUrl(baseUrl))
   const data = cleanData(options.data || {})
 
   return new Promise((resolve, reject) => {
+    if (rejectUnconfiguredApi(reject)) {
+      return
+    }
+
     const tryRequest = (index = 0) => {
       const baseUrl = baseUrls[index]
       const fullUrl = `${baseUrl}${url}`
@@ -100,8 +121,12 @@ function request(url, options = {}) {
 }
 
 function uploadFileWithFallback(url, imagePath, options = {}) {
-  const baseUrls = getApiBaseUrls()
+  const baseUrls = getApiBaseUrls().filter(baseUrl => !isPlaceholderApiUrl(baseUrl))
   return new Promise((resolve, reject) => {
+    if (rejectUnconfiguredApi(reject)) {
+      return
+    }
+
     const tryUpload = (index = 0) => {
       const baseUrl = baseUrls[index]
       const fullUrl = `${baseUrl}${url}`

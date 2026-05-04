@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Optional
 from uuid import uuid4
 import aiosqlite
+import os
 import shutil
 
 from app.db.database import get_db
@@ -19,6 +20,20 @@ from app.models.food import (
 router = APIRouter()
 UPLOAD_DIR = Path(__file__).resolve().parents[2] / "uploads"
 ALLOWED_IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
+
+
+def build_public_upload_url(request: Request, filename: str) -> str:
+    """生成可被小程序访问的上传图片地址。正式环境优先使用 HTTPS 公网域名。"""
+    public_base_url = os.getenv("API_PUBLIC_BASE_URL", "").strip().rstrip("/")
+    if public_base_url:
+        return f"{public_base_url}/uploads/{filename}"
+
+    forwarded_proto = request.headers.get("x-forwarded-proto", "").split(",")[0].strip()
+    forwarded_host = request.headers.get("x-forwarded-host", "").split(",")[0].strip()
+    if forwarded_proto and forwarded_host:
+        return f"{forwarded_proto}://{forwarded_host}/uploads/{filename}"
+
+    return str(request.base_url.replace(path=f"uploads/{filename}", query=""))
 
 
 async def calculate_expiry_date(put_date: date, shelf_life_days: int, location: str) -> date:
@@ -218,7 +233,7 @@ async def upload_food_image(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"图片保存失败：{str(e)}")
 
-    image_url = str(request.base_url.replace(path=f"uploads/{filename}", query=""))
+    image_url = build_public_upload_url(request, filename)
     return {
         "success": True,
         "data": {

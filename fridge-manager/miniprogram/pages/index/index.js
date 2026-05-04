@@ -1,6 +1,7 @@
 // pages/index/index.js
 const app = getApp()
 const api = require('../../utils/api.js')
+const imageCache = require('../../utils/imageCache.js')
 
 function getCountdownInfo(expiryDate) {
   const today = new Date()
@@ -138,6 +139,7 @@ Page({
             return {
               ...food,
               ...countdown,
+              display_image_url: imageCache.getDisplayImageUrl(food.image_url),
             }
           })
           .sort((a, b) => {
@@ -161,6 +163,7 @@ Page({
           freezerList,
           filteredInventory,
         })
+        this.resolveDisplayImages(foodList)
       }
 
       this.setData({
@@ -220,6 +223,50 @@ Page({
       return source.filter(food => food.riskType === 'warning' || food.riskType === 'expired')
     }
     return source.filter(food => food.category === quickFilter)
+  },
+
+  async resolveDisplayImages(foodList) {
+    const targets = foodList.filter(food => food.image_url && !food.display_image_url)
+    if (!targets.length) {
+      return
+    }
+
+    const token = (this.imageResolveToken || 0) + 1
+    this.imageResolveToken = token
+
+    const resolvedItems = await Promise.all(targets.map(async (food) => ({
+      id: food.id,
+      imageUrl: food.image_url,
+      displayUrl: await imageCache.resolveImageUrl(food.image_url),
+    })))
+
+    if (this.imageResolveToken !== token) {
+      return
+    }
+
+    const displayMap = resolvedItems.reduce((map, item) => {
+      if (item.displayUrl) {
+        map[`${item.id}:${item.imageUrl}`] = item.displayUrl
+      }
+      return map
+    }, {})
+    if (!Object.keys(displayMap).length) {
+      return
+    }
+
+    const hydrateList = (list) => list.map((item) => {
+      const displayUrl = displayMap[`${item.id}:${item.image_url}`]
+      return displayUrl ? { ...item, display_image_url: displayUrl } : item
+    })
+
+    this.setData({
+      foodList: hydrateList(this.data.foodList),
+      actionFoods: hydrateList(this.data.actionFoods),
+      expiredFoods: hydrateList(this.data.expiredFoods),
+      activeColdList: hydrateList(this.data.activeColdList),
+      freezerList: hydrateList(this.data.freezerList),
+      filteredInventory: hydrateList(this.data.filteredInventory),
+    })
   },
 
   onActionTouchStart(e) {

@@ -1,6 +1,7 @@
 // pages/detail/detail.js
 const app = getApp()
 const api = require('../../utils/api.js')
+const imageCache = require('../../utils/imageCache.js')
 
 Page({
   data: {
@@ -36,9 +37,10 @@ Page({
     try {
       const res = await api.food.detail(this.data.foodId)
       if (res.success) {
-        const food = res.data
+        const food = this.decorateFood(res.data)
         const daysResult = app.calcDaysLeft(food.expiry_date)
         this.setData({ food, daysResult })
+        this.resolveDisplayImage(food.image_url)
         this.loadShelfProfile(food)
       }
     } catch (err) {
@@ -84,6 +86,28 @@ Page({
     return profile[location] || '--'
   },
 
+  decorateFood(food) {
+    return {
+      ...food,
+      display_image_url: imageCache.getDisplayImageUrl(food.image_url),
+    }
+  },
+
+  async resolveDisplayImage(imageUrl) {
+    if (!imageUrl || imageCache.getDisplayImageUrl(imageUrl)) {
+      return
+    }
+
+    const token = (this.imageResolveToken || 0) + 1
+    this.imageResolveToken = token
+    const displayUrl = await imageCache.resolveImageUrl(imageUrl)
+    if (this.imageResolveToken === token && displayUrl && this.data.food && this.data.food.image_url === imageUrl) {
+      this.setData({
+        'food.display_image_url': displayUrl,
+      })
+    }
+  },
+
   async loadShelfProfile(food) {
     try {
       const ref = await api.food.getShelfLifeReference(food.name, food.category)
@@ -123,11 +147,12 @@ Page({
         shelf_life_days: Number(shelfLife),
       })
       if (res.success) {
-        const food = res.data
+        const food = this.decorateFood(res.data)
         this.setData({
           food,
           daysResult: app.calcDaysLeft(food.expiry_date),
         })
+        this.resolveDisplayImage(food.image_url)
         if (typeof app.markFoodListDirty === 'function') {
           app.markFoodListDirty()
         }

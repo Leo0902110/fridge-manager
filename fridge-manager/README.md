@@ -44,7 +44,7 @@ fridge-manager/
 1. 打开微信开发者工具
 2. 导入 `miniprogram/` 目录
 3. 在 `project.config.json` 中配置你的 AppID
-4. 修改 `utils/api.js` 中的后端地址
+4. 开发环境后端地址在 `miniprogram/app.js` 中配置；正式上线按 `DEPLOYMENT.md` 配置 HTTPS 域名
 
 ### 后端
 ```bash
@@ -60,12 +60,16 @@ python main.py
 2. 登录并创建 API Key
 3. 在 `backend/.env` 中配置：
 ```
-DASHSCOPE_API_KEY=sk-your_api_key
+DASHSCOPE_API_KEY=your_dashscope_api_key
 QWEN_MODEL=qwen-plus
 QWEN_VL_MODEL=qwen-vl-max
 ```
 
 **详细说明：** 查看 `backend/QWEN_CONFIG.md`
+
+### 正式上线
+
+正式版/体验版必须使用 HTTPS 后端域名，并在微信公众平台配置合法域名。完整步骤见 `DEPLOYMENT.md`。
 
 ### 百度 AI 开放平台（备用）
 1. 访问 https://ai.baidu.com/

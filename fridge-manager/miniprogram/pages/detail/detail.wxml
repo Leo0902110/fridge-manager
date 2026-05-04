@@ -35,7 +35,7 @@
   </view>
 
   <view class="card summary-card">
-    <image class="detail-food-image" wx:if="{{food.image_url}}" src="{{food.image_url}}" mode="aspectFill" />
+    <image class="detail-food-image" wx:if="{{food.display_image_url}}" src="{{food.display_image_url}}" mode="aspectFill" />
     <view class="summary-top">
       <view class="summary-icon">
         <text>{{getCategoryIcon(food.category)}}</text>

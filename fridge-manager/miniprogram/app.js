@@ -1,12 +1,56 @@
 // app.js
+const PRODUCTION_API_BASE_URL = 'https://api.your-domain.com/api/v1'
 const DEVTOOLS_API_BASE_URL = 'http://127.0.0.1:8000/api/v1'
 const LOCALHOST_API_BASE_URL = 'http://localhost:8000/api/v1'
 const LAN_API_BASE_URL = 'http://192.168.1.250:8000/api/v1'
+
+function getMiniProgramEnv() {
+  try {
+    const accountInfo = wx.getAccountInfoSync()
+    return accountInfo.miniProgram.envVersion || 'develop'
+  } catch (err) {
+    return 'develop'
+  }
+}
+
+function isProductionLikeEnv() {
+  const envVersion = getMiniProgramEnv()
+  return envVersion === 'release' || envVersion === 'trial'
+}
+
+function isPlaceholderProductionApi() {
+  return /your-domain\.com|example\.com/.test(PRODUCTION_API_BASE_URL)
+}
+
+function getInitialApiBaseUrl() {
+  if (isProductionLikeEnv()) {
+    return PRODUCTION_API_BASE_URL
+  }
+  return wx.getSystemInfoSync().platform === 'devtools'
+    ? DEVTOOLS_API_BASE_URL
+    : LAN_API_BASE_URL
+}
+
+function getApiBaseUrlFallbacks() {
+  if (isProductionLikeEnv()) {
+    return []
+  }
+  return wx.getSystemInfoSync().platform === 'devtools'
+    ? [LOCALHOST_API_BASE_URL, LAN_API_BASE_URL]
+    : [DEVTOOLS_API_BASE_URL, LOCALHOST_API_BASE_URL]
+}
 
 App({
   onLaunch() {
     // 小程序启动时执行
     console.log('🧊 冰箱管家启动')
+    if (isProductionLikeEnv() && isPlaceholderProductionApi()) {
+      wx.showModal({
+        title: '后端未配置',
+        content: '体验版/正式版需要先把 PRODUCTION_API_BASE_URL 改成 HTTPS 公网域名。',
+        showCancel: false,
+      })
+    }
     
     // 检查更新
     if (wx.canIUse('getUpdateManager')) {
@@ -57,13 +101,9 @@ App({
   },
   
   globalData: {
-    // API 基础地址（开发时改为你的后端地址）
-    API_BASE_URL: wx.getSystemInfoSync().platform === 'devtools'
-      ? DEVTOOLS_API_BASE_URL
-      : LAN_API_BASE_URL,
-    API_BASE_URL_FALLBACKS: wx.getSystemInfoSync().platform === 'devtools'
-      ? [LOCALHOST_API_BASE_URL, LAN_API_BASE_URL]
-      : [DEVTOOLS_API_BASE_URL, LOCALHOST_API_BASE_URL],
+    // 正式版/体验版必须使用 HTTPS 公网域名；开发版保留本地调试回退。
+    API_BASE_URL: getInitialApiBaseUrl(),
+    API_BASE_URL_FALLBACKS: getApiBaseUrlFallbacks(),
     
     // 用户信息
     userInfo: null,

@@ -133,7 +133,7 @@
     >
       <view class="risk-light"></view>
       <view class="risk-main">
-        <image class="risk-food-thumb" wx:if="{{item.image_url}}" src="{{item.image_url}}" mode="aspectFill" />
+        <image class="risk-food-thumb" wx:if="{{item.display_image_url}}" src="{{item.display_image_url}}" mode="aspectFill" />
         <view class="risk-food-icon" wx:else>
           <text>{{getCategoryIcon(item.category)}}</text>
         </view>
