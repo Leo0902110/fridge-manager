@@ -9,7 +9,7 @@ from typing import Optional
 
 import aiosqlite
 import httpx
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from app.db.database import get_db
@@ -34,13 +34,20 @@ def allow_dev_login() -> bool:
     return os.getenv("ALLOW_DEV_LOGIN", "false").strip().lower() in ("1", "true", "yes", "on")
 
 
-async def exchange_code_for_openid(code: str) -> dict:
+def is_local_request(request: Request) -> bool:
+    host = request.headers.get("host", "").split(":")[0]
+    client_host = request.client.host if request.client else ""
+    local_hosts = {"127.0.0.1", "localhost", "::1"}
+    return host in local_hosts or client_host in local_hosts
+
+
+async def exchange_code_for_openid(code: str, request: Request) -> dict:
     appid = os.getenv("WECHAT_APPID", "").strip()
     secret = os.getenv("WECHAT_APP_SECRET", "").strip()
 
     if not appid or not secret:
-        if allow_dev_login():
-            return {"openid": os.getenv("DEV_OPENID", "dev-openid")}
+        if allow_dev_login() or is_local_request(request):
+            return {"openid": os.getenv("DEV_OPENID", "local-dev-openid")}
         raise HTTPException(status_code=500, detail="未配置 WECHAT_APPID / WECHAT_APP_SECRET")
 
     async with httpx.AsyncClient(timeout=10) as client:
@@ -92,8 +99,12 @@ async def create_session(db: aiosqlite.Connection, user_id: int) -> tuple[str, s
 
 
 @router.post("/login")
-async def login(payload: LoginRequest, db: aiosqlite.Connection = Depends(get_db)):
-    session = await exchange_code_for_openid(payload.code)
+async def login(
+    payload: LoginRequest,
+    request: Request,
+    db: aiosqlite.Connection = Depends(get_db),
+):
+    session = await exchange_code_for_openid(payload.code, request)
     user = await upsert_user(db, session["openid"], session.get("unionid"))
     token, expires_at = await create_session(db, user["id"])
     return {
