@@ -1,5 +1,7 @@
 # 正式上线检查清单
 
+如果需要一步一步照着做，先看更详细的 [DEPLOYMENT_ALIYUN_STEP_BY_STEP.md](DEPLOYMENT_ALIYUN_STEP_BY_STEP.md)。
+
 ## 1. 准备 HTTPS 后端域名
 
 小程序正式版、体验版不能使用 `http://`、局域网 IP 或 `localhost`。需要准备一个已备案并配置 HTTPS 证书的域名，例如：
