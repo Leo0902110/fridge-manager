@@ -40,12 +40,21 @@ function normalizeFreshnessLevel(level) {
 function normalizeFreshnessInfo(item) {
   const description = String((item && (item.freshness_description || item.freshness_reason || item.storage_tip)) || '')
   const score = Number(item && item.freshness_score)
-  const severeKeywords = ['黑洞', '烂洞', '腐烂', '腐坏', '烂了', '发霉', '霉斑', '霉点', '变质', '软烂', '渗汁', '流汁', '大面积黑斑', '明显黑斑', '发黑凹陷']
+  const severeKeywords = ['黑洞', '烂洞', '腐烂', '腐坏', '烂了', '发霉', '霉斑', '霉点', '软烂', '渗汁', '流汁', '大面积黑斑', '明显黑斑', '发黑凹陷']
   let level = normalizeFreshnessLevel(item && (item.freshness_level || item.freshness))
-  if (severeKeywords.some(keyword => description.indexOf(keyword) >= 0) || (level === 'stale' && score && score <= 60)) {
+  const hasSevereSignal = severeKeywords.some(keyword => description.indexOf(keyword) >= 0)
+  if (hasSevereSignal || (score && score < 20)) {
     level = 'spoiled'
+  } else if (score >= 60) {
+    level = 'fresh'
+  } else if (score >= 40) {
+    level = 'normal'
+  } else if (score >= 20) {
+    level = 'stale'
+  } else if (level === 'spoiled') {
+    level = 'stale'
   }
-  const freshnessScore = level === 'spoiled' && (!score || score > 30) ? 30 : (item && item.freshness_score) || ''
+  const freshnessScore = level === 'spoiled' && (!score || score >= 20) ? 19 : (item && item.freshness_score) || ''
   const freshnessDescription = level === 'spoiled'
     ? (description || '疑似变质，不建议入库')
     : (item && (item.freshness_description || item.freshness_reason)) || ''

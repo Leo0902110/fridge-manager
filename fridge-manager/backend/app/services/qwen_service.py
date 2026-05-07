@@ -6,6 +6,8 @@
 import json
 import logging
 import os
+import copy
+import hashlib
 from http import HTTPStatus
 from pathlib import Path
 from typing import Any, Dict, Optional, cast
@@ -37,6 +39,7 @@ class QwenService:
     def __init__(self):
         self._warned_missing_sdk = False
         self._warned_missing_key = False
+        self._recognition_cache: dict[str, Dict[str, object]] = {}
         self._refresh_config()
 
     def _refresh_config(self):
@@ -96,10 +99,10 @@ class QwenService:
         return mapping.get(text, text if text in ("fresh", "normal", "stale", "spoiled") else "normal")
 
     def _infer_freshness_from_text(self, food: dict) -> str:
-        text = "".join(str(food.get(key) or "") for key in ("name", "category", "storage_tip", "freshness_description", "freshness_reason"))
+        text = "".join(str(food.get(key) or "") for key in ("freshness_description", "freshness_reason", "freshness_evidence"))
         if self._contains_any(text, [
             "发霉", "霉斑", "霉点", "腐烂", "腐坏", "烂了", "烂洞", "黑洞",
-            "异味", "变质", "黏液", "流汁", "汁水渗出", "黑斑严重", "大面积黑斑",
+            "异味", "黏液", "流汁", "汁水渗出", "黑斑严重", "大面积黑斑",
             "明显黑斑", "深色凹陷", "发黑凹陷", "软烂", "腐烂洞",
         ]):
             return "spoiled"
@@ -109,13 +112,19 @@ class QwenService:
             return "fresh"
         return "normal"
 
+    @staticmethod
+    def _freshness_level_from_score(score: int) -> str:
+        if score < 20:
+            return "spoiled"
+        if score < 40:
+            return "stale"
+        if score < 60:
+            return "normal"
+        return "fresh"
+
     def _normalize_freshness_info(self, food: dict) -> str:
         level = self._normalize_freshness_level(food.get("freshness_level") or food.get("freshness"))
         inferred_level = self._infer_freshness_from_text(food)
-        if inferred_level == "spoiled":
-            level = "spoiled"
-        elif level == "normal":
-            level = inferred_level
 
         try:
             score = int(float(food.get("freshness_score") or 0))
@@ -123,33 +132,34 @@ class QwenService:
             score = 0
 
         if score:
-            if score <= 30:
+            level = self._freshness_level_from_score(score)
+            if inferred_level == "spoiled":
                 level = "spoiled"
-            elif score <= 60 and level == "stale":
-                level = "spoiled"
-            elif score < 55 and level not in ("spoiled",):
-                level = "stale"
-            elif score >= 85 and level == "normal":
-                level = "fresh"
         else:
             default_scores = {
-                "fresh": 90,
-                "normal": 70,
-                "stale": 45,
-                "spoiled": 20,
+                "fresh": 80,
+                "normal": 50,
+                "stale": 30,
+                "spoiled": 10,
             }
+            if inferred_level == "spoiled":
+                level = "spoiled"
+            elif level == "normal":
+                level = inferred_level
             score = default_scores[level]
 
         food["freshness_level"] = level
         food["freshness_score"] = max(0, min(score, 100))
-        if not food.get("freshness_description"):
-            descriptions = {
-                "fresh": "外观看起来新鲜",
-                "normal": "外观新鲜度一般",
-                "stale": "外观不够新鲜",
-                "spoiled": "疑似变质，不建议入库",
-            }
+        descriptions = {
+            "fresh": "外观看起来新鲜",
+            "normal": "外观新鲜度一般",
+            "stale": "外观不够新鲜",
+            "spoiled": "疑似变质，不建议入库",
+        }
+        if not food.get("freshness_description") or (level != "spoiled" and self._contains_any(str(food.get("freshness_description") or ""), ["疑似变质", "变质", "建议丢弃"])):
             food["freshness_description"] = descriptions[level]
+        if level != "spoiled" and self._contains_any(str(food.get("storage_tip") or ""), ["疑似变质", "不建议入库", "建议丢弃", "丢弃"]):
+            food["storage_tip"] = ""
         return level
 
     def _apply_freshness_adjustment(self, food: dict, days: int) -> int:
@@ -271,6 +281,12 @@ class QwenService:
             raise ValueError("千问 AI 当前不可用")
         
         try:
+            cache_key = ""
+            if Path(image_path).exists():
+                cache_key = hashlib.sha256(Path(image_path).read_bytes()).hexdigest()
+                if cache_key in self._recognition_cache:
+                    return copy.deepcopy(self._recognition_cache[cache_key])
+
             # 如果是本地文件，转换为 base64 或 file:// URL
             if Path(image_path).exists():
                 image_path = f"file://{image_path}"
@@ -288,10 +304,15 @@ class QwenService:
 3. 对整份熟食，whole_food 的类别用“熟食”或“剩菜”，冷藏保质期通常为 1-2 天；不确定时 shelf_life_days 返回 2。
 4. shelf_life_days 表示在 recommended_location 对应保存方式下的建议天数。请按日常认知估算，并为用户着想：不是所有东西都要冷藏。未开封罐头、密封包装、干货、饼干、方便面、米面、坚果、完整土豆/洋葱/大蒜/南瓜/红薯、香蕉、面包、完整耐放水果等，优先允许 room 常温保存。
 5. 高风险食物要保守：切开的菠萝/凤梨冷藏约 3-5 天，不要给 21 天；草莓等浆果 1-3 天；普通新鲜水果 3-7 天；苹果/橙子这类完整耐放水果可 room 或 fridge 更久；生肉/海鲜不当天吃建议 freezer；未开封罐头/密封常温食品可按 room 给 90-365 天，已开封罐头冷藏 2-5 天；熟食/剩菜冷藏 1-3 天。
-6. 必须对每个结果返回 freshness_level：fresh/normal/stale/spoiled；freshness_score 为 0-100。判断依据包括颜色暗沉、萎蔫、发皱、软烂、褐变/黑斑、霉斑、汁水渗出、边缘干硬、包装胀气/漏液等。不要把“食物品类的标准保质期”当作当前图片的新鲜度。
-7. 对明显腐败要严判：水果/蔬菜出现黑洞、烂洞、大面积深色黑斑、发黑凹陷、软烂渗汁、霉斑时，freshness_level 必须是 spoiled，freshness_score 建议 0-30，不要给 stale 或 60 分。
-8. 先估标准保质期，再按新鲜度折减：fresh 可接近标准；normal 略保守；stale 必须大幅缩短，水果/蔬菜/主食通常 1-2 天，高风险肉类/海鲜/乳制品/熟食通常 1 天；spoiled 返回 1 天并在 storage_tip 写“不建议入库/建议丢弃”。
-9. 如果图片里食物看起来已经切开、开封、熟制、混合、汁水多或不够新鲜，要保守缩短天数。不要为了“耐放”给离谱长天数。
+6. 新鲜度必须按固定扣分表评分，不要凭感觉给标签。先从 100 分开始，只根据图片中清楚可见的缺陷扣分：
+   - 无明显缺陷或只是正常成熟/正常切面/正常反光/果皮天然斑点：扣 0-15 分。
+   - 轻微压痕、轻微褐变、轻微干边、轻微发软：扣 20-35 分。
+   - 明显萎蔫、明显发皱、较多褐变/黑斑、明显软塌但没有腐烂霉斑：扣 40-60 分。
+   - 黑洞、烂洞、霉斑、腐烂、软烂渗汁、异味迹象、包装胀气/漏液：扣 80-100 分。
+7. freshness_score 与 freshness_level 必须严格对应：0-19 spoiled，20-39 stale，40-59 normal，60-100 fresh。普通成熟香蕉、完整水果、正常切开的水果通常应为 fresh；不要把切面反光、红色果肉、香蕉正常黄色果皮当作变质。
+8. freshness_description 必须写清楚可见证据，例如“外观完整”“正常切面”“轻微褐变”“有烂洞”。如果没有看到黑洞、烂洞、霉斑、渗汁，不要写“疑似变质”。
+9. 先估标准保质期，再按新鲜度折减：fresh 可接近标准；normal 略保守；stale 大幅缩短，水果/蔬菜/主食通常 1-2 天，高风险肉类/海鲜/乳制品/熟食通常 1 天；spoiled 返回 1 天并在 storage_tip 写“不建议入库/建议丢弃”。
+10. 如果图片里食物看起来已经切开、开封、熟制、混合、汁水多或不够新鲜，要保守缩短天数。不要为了“耐放”给离谱长天数。
 
 以 JSON 格式返回结果：
 {
@@ -309,7 +330,9 @@ class QwenService:
             response = cast(Any, MultiModalConversation).call(
                 model=self.vl_model,
                 messages=messages,
-                result_format='message'
+                result_format='message',
+                temperature=0,
+                top_p=0.1,
             )
             
             if response.status_code == HTTPStatus.OK:
@@ -352,12 +375,17 @@ class QwenService:
                             whole_food['recommended_location'] = 'fridge'
                         self._normalize_recognition_item(whole_food, whole=True)
                     
-                    return {
+                    normalized_result = {
                         "mode": mode,
                         "reason": result.get('reason', ''),
                         "whole_food": whole_food,
                         "foods": foods,
                     }
+                    if cache_key:
+                        self._recognition_cache[cache_key] = copy.deepcopy(normalized_result)
+                        if len(self._recognition_cache) > 64:
+                            self._recognition_cache.pop(next(iter(self._recognition_cache)))
+                    return normalized_result
                 except json.JSONDecodeError as e:
                     logger.error(f"解析 AI 识别结果失败：{e}, content: {content}")
                     return {"mode": "split", "reason": "", "whole_food": None, "foods": []}
