@@ -9,6 +9,12 @@
   <view class="card capture-card">
     <view class="section-header capture-header">
       <text class="section-title">拍照</text>
+      <button
+        class="reset-add-btn"
+        wx:if="{{imagePath}}"
+        bindtap="resetAddPage"
+        disabled="{{recognizing || submitting}}"
+      >重新添加</button>
     </view>
 
     <view class="camera-panel" bindtap="chooseImage" wx:if="{{!imagePath}}">
@@ -135,6 +141,10 @@
               <text class="selected-meta freshness-text">{{item.freshness_label || getFreshnessLabel(item.freshness_level)}}</text>
             </block>
           </view>
+          <view class="explain-chip" wx:if="{{item.explain_text}}">
+            <text class="explain-chip-label">推荐依据</text>
+            <text class="explain-chip-text">{{item.explain_text}}</text>
+          </view>
         </view>
         <view class="selected-actions">
           <view class="selected-delete-btn" catchtap="removeSelectedItem" data-index="{{index}}">×</view>
@@ -228,6 +238,7 @@
         </view>
         <view class="storage-advice" wx:elif="{{storageSuggestion}}">
           <text class="storage-advice-text">{{manualLookupLoading ? '查询中...' : storageSuggestion}}</text>
+          <text class="storage-explain-text" wx:if="{{manualExplainText && !manualLookupLoading}}">{{manualExplainText}}</text>
           <view class="storage-advice-actions" wx:if="{{manualSuggestionReady}}">
             <button class="advice-action" bindtap="applyManualSuggestion" disabled="{{submitting}}">应用</button>
           </view>
@@ -414,6 +425,10 @@
       <view class="decision-expiry">
         <text class="decision-expiry-label">到期</text>
         <text class="decision-expiry-date">{{decisionItem.expiryPreview || '待确认'}}</text>
+      </view>
+      <view class="decision-explain" wx:if="{{decisionItem.explain_text}}">
+        <text class="decision-explain-title">为什么这样推荐</text>
+        <text class="decision-explain-text">{{decisionItem.explain_text}}</text>
       </view>
 
       <button class="btn btn-primary decision-primary" bindtap="confirmDecision">

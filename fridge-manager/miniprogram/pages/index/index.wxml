@@ -61,12 +61,30 @@
   <view class="action-dashboard card">
     <view class="section-header action-header">
       <text class="section-title">临期提醒</text>
-      <text class="section-hint">{{actionFoods.length + expiredFoods.length}} 项</text>
     </view>
 
     <view class="expired-alert" wx:if="{{expiredFoods.length > 0}}">
       <text class="expired-alert-icon">!</text>
       <text class="expired-alert-title">过期 {{expiredFoods.length}} 项需要处理</text>
+    </view>
+    <view class="expired-list" wx:if="{{expiredFoods.length > 0}}">
+      <view
+        class="expired-item-card"
+        wx:for="{{expiredFoods}}"
+        wx:key="id"
+        bindtap="goToDetail"
+        data-id="{{item.id}}"
+      >
+        <view class="action-main">
+          <image class="action-food-thumb expired-thumb" wx:if="{{item.display_image_url}}" src="{{item.display_image_url}}" mode="aspectFill" binderror="onFoodImageError" data-id="{{item.id}}" data-url="{{item.image_url}}" />
+          <text class="action-icon expired-icon" wx:else>{{getCategoryIcon(item.category)}}</text>
+          <view class="list-main">
+            <text class="list-title">{{item.name}}</text>
+            <text class="list-subtitle expired-subtitle">{{item.countdownText}}</text>
+          </view>
+        </view>
+        <text class="expired-chip">处理</text>
+      </view>
     </view>
 
     <view wx:if="{{actionFoods.length > 0}}">
@@ -116,6 +134,18 @@
 
     <view class="zero-waste" wx:if="{{actionFoods.length === 0 && expiredFoods.length === 0}}">
       <text class="zero-waste-title">🎉 无临期</text>
+    </view>
+
+    <view class="recipe-prompt" wx:if="{{foodList.length > 0}}">
+      <view class="recipe-prompt-main">
+        <text class="recipe-prompt-title">用临期食材做一餐</text>
+        <text class="recipe-prompt-subtitle">优先消耗快到期库存</text>
+      </view>
+      <button
+        class="recipe-action-btn"
+        bindtap="generateTodayRecipe"
+        disabled="{{recipeLoading || foodList.length === 0}}"
+      >{{recipeLoading ? '生成中' : '生成菜谱'}}</button>
     </view>
   </view>
 
@@ -194,5 +224,48 @@
   <view class="undo-snackbar" wx:if="{{undoVisible}}">
     <text>{{undoText}}</text>
     <button class="undo-btn" bindtap="undoLastAction">撤销</button>
+  </view>
+
+  <view class="recipe-overlay" wx:if="{{recipeVisible}}" catchtap="closeRecipeSheet">
+    <view class="recipe-sheet" catchtap="noop">
+      <view class="recipe-handle"></view>
+      <view wx:if="{{recipeLoading}}" class="recipe-loading">
+        <text>正在根据冰箱库存生成...</text>
+      </view>
+      <block wx:elif="{{todayRecipe}}">
+        <view class="recipe-header">
+          <text class="recipe-kicker">{{todayRecipe.source === 'ai' ? 'AI 今日菜谱' : '今日菜谱'}}</text>
+          <text class="recipe-title">{{todayRecipe.title}}</text>
+          <text class="recipe-subtitle">{{todayRecipe.subtitle}}</text>
+        </view>
+
+        <view class="recipe-warning" wx:if="{{todayRecipe.expired_warnings.length > 0}}">
+          <text wx:for="{{todayRecipe.expired_warnings}}" wx:key="*this">{{item}}</text>
+        </view>
+
+        <view class="recipe-section">
+          <text class="recipe-section-title">优先使用</text>
+          <view class="recipe-ingredient" wx:for="{{todayRecipe.ingredients}}" wx:key="id">
+            <text class="recipe-ingredient-name">{{item.name}}</text>
+            <text class="recipe-ingredient-reason">{{item.reason}}</text>
+          </view>
+        </view>
+
+        <view class="recipe-section">
+          <text class="recipe-section-title">做法</text>
+          <view class="recipe-step" wx:for="{{todayRecipe.steps}}" wx:key="*this">
+            <text class="recipe-step-index">{{index + 1}}</text>
+            <text class="recipe-step-text">{{item}}</text>
+          </view>
+        </view>
+
+        <view class="recipe-section" wx:if="{{todayRecipe.tips.length > 0}}">
+          <text class="recipe-section-title">提醒</text>
+          <text class="recipe-tip" wx:for="{{todayRecipe.tips}}" wx:key="*this">{{item}}</text>
+        </view>
+
+        <button class="btn btn-primary recipe-close-btn" bindtap="closeRecipeSheet">知道了</button>
+      </block>
+    </view>
   </view>
 </view>

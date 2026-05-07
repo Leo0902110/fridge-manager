@@ -3,11 +3,12 @@
 支持食物识别、保质期推理、饮食建议
 """
 
+import json
 import logging
 import os
 from http import HTTPStatus
 from pathlib import Path
-from typing import Any, Dict, cast
+from typing import Any, Dict, Optional, cast
 
 from dotenv import load_dotenv
 
@@ -22,6 +23,13 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+MAIN_FOOD_TERMS = {
+    "牛肉", "猪肉", "鸡肉", "鸡腿", "牛排", "羊肉", "鱼", "虾",
+    "鸡蛋", "豆腐", "牛奶", "酸奶", "米饭", "面条", "面包",
+    "白菜", "胡萝卜", "西红柿", "番茄", "黄瓜", "土豆", "生菜",
+    "菠菜", "青椒", "洋葱", "苹果", "香蕉", "橙子", "草莓", "葡萄",
+}
+
 
 class QwenService:
     """通义千问 AI 服务"""
@@ -34,6 +42,7 @@ class QwenService:
     def _refresh_config(self):
         self.api_key = os.getenv("DASHSCOPE_API_KEY", "")
         self.text_model = os.getenv("QWEN_MODEL", "qwen-plus")
+        self.recipe_model = os.getenv("QWEN_RECIPE_MODEL", self.text_model)
         self.vl_model = os.getenv("QWEN_VL_MODEL", "qwen-vl-max")
 
         if dashscope is None:
@@ -88,7 +97,11 @@ class QwenService:
 
     def _infer_freshness_from_text(self, food: dict) -> str:
         text = "".join(str(food.get(key) or "") for key in ("name", "category", "storage_tip", "freshness_description", "freshness_reason"))
-        if self._contains_any(text, ["发霉", "霉斑", "腐烂", "腐坏", "异味", "变质", "黏液", "流汁", "黑斑严重"]):
+        if self._contains_any(text, [
+            "发霉", "霉斑", "霉点", "腐烂", "腐坏", "烂了", "烂洞", "黑洞",
+            "异味", "变质", "黏液", "流汁", "汁水渗出", "黑斑严重", "大面积黑斑",
+            "明显黑斑", "深色凹陷", "发黑凹陷", "软烂", "腐烂洞",
+        ]):
             return "spoiled"
         if self._contains_any(text, ["不新鲜", "欠新鲜", "萎蔫", "发蔫", "变软", "发皱", "干瘪", "褐变", "黑斑", "碰伤", "熟透", "边缘干"]):
             return "stale"
@@ -98,8 +111,11 @@ class QwenService:
 
     def _normalize_freshness_info(self, food: dict) -> str:
         level = self._normalize_freshness_level(food.get("freshness_level") or food.get("freshness"))
-        if level == "normal":
-            level = self._infer_freshness_from_text(food)
+        inferred_level = self._infer_freshness_from_text(food)
+        if inferred_level == "spoiled":
+            level = "spoiled"
+        elif level == "normal":
+            level = inferred_level
 
         try:
             score = int(float(food.get("freshness_score") or 0))
@@ -107,7 +123,9 @@ class QwenService:
             score = 0
 
         if score:
-            if score < 30:
+            if score <= 30:
+                level = "spoiled"
+            elif score <= 60 and level == "stale":
                 level = "spoiled"
             elif score < 55 and level not in ("spoiled",):
                 level = "stale"
@@ -271,8 +289,9 @@ class QwenService:
 4. shelf_life_days 表示在 recommended_location 对应保存方式下的建议天数。请按日常认知估算，并为用户着想：不是所有东西都要冷藏。未开封罐头、密封包装、干货、饼干、方便面、米面、坚果、完整土豆/洋葱/大蒜/南瓜/红薯、香蕉、面包、完整耐放水果等，优先允许 room 常温保存。
 5. 高风险食物要保守：切开的菠萝/凤梨冷藏约 3-5 天，不要给 21 天；草莓等浆果 1-3 天；普通新鲜水果 3-7 天；苹果/橙子这类完整耐放水果可 room 或 fridge 更久；生肉/海鲜不当天吃建议 freezer；未开封罐头/密封常温食品可按 room 给 90-365 天，已开封罐头冷藏 2-5 天；熟食/剩菜冷藏 1-3 天。
 6. 必须对每个结果返回 freshness_level：fresh/normal/stale/spoiled；freshness_score 为 0-100。判断依据包括颜色暗沉、萎蔫、发皱、软烂、褐变/黑斑、霉斑、汁水渗出、边缘干硬、包装胀气/漏液等。不要把“食物品类的标准保质期”当作当前图片的新鲜度。
-7. 先估标准保质期，再按新鲜度折减：fresh 可接近标准；normal 略保守；stale 必须大幅缩短，水果/蔬菜/主食通常 1-2 天，高风险肉类/海鲜/乳制品/熟食通常 1 天；spoiled 返回 1 天并在 storage_tip 写“不建议入库/建议丢弃”。
-8. 如果图片里食物看起来已经切开、开封、熟制、混合、汁水多或不够新鲜，要保守缩短天数。不要为了“耐放”给离谱长天数。
+7. 对明显腐败要严判：水果/蔬菜出现黑洞、烂洞、大面积深色黑斑、发黑凹陷、软烂渗汁、霉斑时，freshness_level 必须是 spoiled，freshness_score 建议 0-30，不要给 stale 或 60 分。
+8. 先估标准保质期，再按新鲜度折减：fresh 可接近标准；normal 略保守；stale 必须大幅缩短，水果/蔬菜/主食通常 1-2 天，高风险肉类/海鲜/乳制品/熟食通常 1 天；spoiled 返回 1 天并在 storage_tip 写“不建议入库/建议丢弃”。
+9. 如果图片里食物看起来已经切开、开封、熟制、混合、汁水多或不够新鲜，要保守缩短天数。不要为了“耐放”给离谱长天数。
 
 以 JSON 格式返回结果：
 {
@@ -461,6 +480,109 @@ class QwenService:
         except Exception as e:
             logger.error(f"生成建议失败：{e}")
             return f"{food_name}还有{days_left}天过期，请尽快食用。"
+
+    def generate_recipe_from_inventory(self, ingredients: list[dict], expired_warnings: list[str]) -> Optional[dict]:
+        """根据库存和过期时间生成合理菜谱。失败时返回 None，由调用方使用规则兜底。"""
+        if not self._is_available() or not ingredients:
+            return None
+
+        inventory_lines = []
+        for item in ingredients:
+            days_left = item.get("days_left")
+            if days_left is None:
+                freshness = "未知到期时间"
+            elif days_left < 0:
+                freshness = f"已过期{abs(days_left)}天"
+            elif days_left == 0:
+                freshness = "今天到期"
+            else:
+                freshness = f"剩{days_left}天"
+            inventory_lines.append(
+                f"- {item.get('name')}｜{item.get('category') or '其他'}｜{freshness}"
+            )
+
+        prompt = f'''你是家庭冰箱食材管家。请只基于“冰箱现有食物”和过期时间，生成一份合理、家常、可执行的今日菜谱。
+
+冰箱中优先处理的食物：
+{chr(10).join(inventory_lines)}
+
+过期提醒：
+{chr(10).join(expired_warnings) if expired_warnings else "无"}
+
+设计原则：
+1. 不要把不适合一起烹饪的食材硬凑成一道菜，例如鸡腿和草莓不能生成“鸡腿炒草莓”。
+2. 水果可以作为水果碗、饭后水果、酸奶水果杯；如果与肉类不搭，应放在搭配建议里，不要放进主菜名。
+3. 肉类、蛋类、豆制品优先作为主菜蛋白；蔬菜可做配菜；主食可作为搭配。
+4. 已过期食物只能提醒检查/清理，不要作为菜谱食材。
+5. 只允许使用上方列表里的主要食材。可以使用油盐酱醋、葱姜蒜等基础调料，但菜名和步骤里不要虚构新的蔬菜、肉、水果、主食。
+6. 菜名要像真实家常菜，步骤 3-5 步，每步简短。
+
+只返回 JSON，不要 Markdown：
+{{
+  "title": "菜名",
+  "subtitle": "为什么今天推荐这份菜，20字以内",
+  "priority": "urgent 或 normal",
+  "ingredients": [
+    {{"id": 数字ID, "name": "食物名", "category": "类别", "days_left": 剩余天数, "reason": "处理原因"}}
+  ],
+  "steps": ["步骤1", "步骤2", "步骤3"],
+  "tips": ["提示1", "提示2"],
+  "expired_warnings": ["过期提醒"],
+  "source": "ai"
+}}
+
+可用食材原始 JSON：
+{json.dumps(ingredients, ensure_ascii=False)}
+'''
+
+        try:
+            response = cast(Any, dashscope).Generation.call(
+                model=self.recipe_model,
+                messages=[{
+                    'role': 'user',
+                    'content': [{'text': prompt}]
+                }],
+                result_format='message'
+            )
+
+            if response.status_code != HTTPStatus.OK:
+                logger.warning(f"AI 菜谱生成失败：{response.message}")
+                return None
+
+            content = response.output.choices[0].message.content
+            content = content.replace('```json', '').replace('```', '').strip()
+            recipe = json.loads(content)
+
+            valid_ids = {item.get("id") for item in ingredients}
+            selected = []
+            for item in recipe.get("ingredients", []):
+                if item.get("id") in valid_ids:
+                    selected.append(item)
+
+            if not recipe.get("title") or not selected or not recipe.get("steps"):
+                return None
+
+            allowed_names = {str(item.get("name", "")) for item in ingredients}
+            allowed_text = " ".join(allowed_names)
+            recipe_text = " ".join([
+                str(recipe.get("title", "")),
+                " ".join(str(step) for step in recipe.get("steps", [])),
+                " ".join(str(tip) for tip in recipe.get("tips", [])),
+            ])
+            for term in MAIN_FOOD_TERMS:
+                if term in recipe_text and term not in allowed_text:
+                    logger.warning(f"AI 菜谱包含库存外主要食材：{term}")
+                    return None
+
+            recipe["ingredients"] = selected
+            recipe["tips"] = recipe.get("tips") or ["临期食材优先处理，异常气味或霉变不要食用。"]
+            recipe["expired_warnings"] = recipe.get("expired_warnings") or expired_warnings
+            recipe["priority"] = recipe.get("priority") if recipe.get("priority") in ("urgent", "normal") else "normal"
+            recipe["source"] = "ai"
+            return recipe
+        except Exception as e:
+            logger.error(f"生成库存菜谱异常：{e}")
+            return None
 
 
 # 全局实例

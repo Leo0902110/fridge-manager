@@ -19,6 +19,14 @@ function getDisplayImageUrl(url) {
   if (!url || isUnsafeHttpUrl(url)) {
     return ''
   }
+  if (getUploadPath(url)) {
+    const candidates = buildCandidates(url)
+    if (isDevelopmentLikeEnv() && (candidates.some(isLocalDevelopmentUrl) || candidates.some(isTryCloudflareUrl))) {
+      return ''
+    }
+    const safeRemote = candidates.find(candidate => candidate && !isUnsafeHttpUrl(candidate) && !isTryCloudflareUrl(candidate))
+    return safeRemote || ''
+  }
   return url
 }
 
@@ -33,6 +41,32 @@ function getAppSafe() {
 function getOrigin(url) {
   const match = typeof url === 'string' ? url.match(/^https?:\/\/[^/]+/) : null
   return match ? match[0] : ''
+}
+
+function isDevtoolsPlatform() {
+  try {
+    const platform = wx.getSystemInfoSync().platform
+    return platform === 'devtools' || platform === 'mac' || platform === 'windows'
+  } catch (err) {
+    return false
+  }
+}
+
+function isDevelopmentLikeEnv() {
+  try {
+    const envVersion = wx.getAccountInfoSync().miniProgram.envVersion
+    return envVersion !== 'release' && envVersion !== 'trial'
+  } catch (err) {
+    return isDevtoolsPlatform()
+  }
+}
+
+function isLocalDevelopmentUrl(url) {
+  return typeof url === 'string' && /^http:\/\/(localhost|127\.0\.0\.1|10\.|172\.(1[6-9]|2\d|3[0-1])\.|192\.168\.)/.test(url)
+}
+
+function isTryCloudflareUrl(url) {
+  return typeof url === 'string' && /\.trycloudflare\.com(?:\/|$)/.test(url)
 }
 
 function getUploadPath(url) {
@@ -96,7 +130,7 @@ async function resolveImageUrl(url) {
   if (!url) {
     return ''
   }
-  if (isLocalTempUrl(url) || !isUnsafeHttpUrl(url)) {
+  if (isLocalTempUrl(url)) {
     return url
   }
   if (imageCache[url]) {
@@ -108,7 +142,21 @@ async function resolveImageUrl(url) {
 
   pendingCache[url] = (async () => {
     const candidates = buildCandidates(url)
-    const safeRemote = candidates.find(candidate => candidate && !isUnsafeHttpUrl(candidate))
+    if (getUploadPath(url) && isDevelopmentLikeEnv()) {
+      const localCandidates = candidates.filter(isLocalDevelopmentUrl)
+      for (let i = 0; i < localCandidates.length; i += 1) {
+        const localPath = await downloadImage(localCandidates[i])
+        if (localPath) {
+          imageCache[url] = localPath
+          return localPath
+        }
+      }
+      if (candidates.some(isTryCloudflareUrl)) {
+        return ''
+      }
+    }
+
+    const safeRemote = candidates.find(candidate => candidate && !isUnsafeHttpUrl(candidate) && !isTryCloudflareUrl(candidate))
     if (safeRemote) {
       imageCache[url] = safeRemote
       return safeRemote

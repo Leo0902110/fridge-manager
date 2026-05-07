@@ -3,12 +3,30 @@ const app = getApp()
 const api = require('../../utils/api.js')
 const imageCache = require('../../utils/imageCache.js')
 
+const LOCATION_LABELS = {
+  fridge: '冷藏',
+  freezer: '冷冻',
+  room: '常温',
+}
+
+function buildShelfExplain(food, shelfProfile, storageTip) {
+  if (!food) {
+    return ''
+  }
+  const locationText = LOCATION_LABELS[food.location] || '冷藏'
+  const days = food.shelf_life_days || (shelfProfile && shelfProfile[food.location]) || ''
+  const sourceText = shelfProfile ? '参考库' : '当前记录'
+  const tip = storageTip ? `，${storageTip}` : ''
+  return `${sourceText}判断：${food.name || '该食材'}属于${food.category || '食材'}，当前按${locationText}保存，所以建议约 ${days || '--'} 天${tip}。`
+}
+
 Page({
   data: {
     foodId: null,
     food: null,
     shelfProfile: null,
     storageTip: '',
+    shelfExplainText: '',
     daysResult: { text: '', type: 'fresh' },
     loading: true,
     actingType: '',
@@ -39,7 +57,11 @@ Page({
       if (res.success) {
         const food = this.decorateFood(res.data)
         const daysResult = app.calcDaysLeft(food.expiry_date)
-        this.setData({ food, daysResult })
+        this.setData({
+          food,
+          daysResult,
+          shelfExplainText: buildShelfExplain(food, this.data.shelfProfile, this.data.storageTip),
+        })
         this.resolveDisplayImage(food.image_url)
         this.loadShelfProfile(food)
       }
@@ -126,13 +148,16 @@ Page({
       const ref = await api.food.getShelfLifeReference(food.name, food.category)
       if (ref.success && ref.data.length > 0) {
         const shelfRef = ref.data[0]
+        const shelfProfile = {
+          fridge: shelfRef.fridge_days || 0,
+          freezer: shelfRef.freezer_days || 0,
+          room: shelfRef.room_temp_days || 0,
+        }
+        const storageTip = shelfRef.storage_tip || ''
         this.setData({
-          shelfProfile: {
-            fridge: shelfRef.fridge_days || 0,
-            freezer: shelfRef.freezer_days || 0,
-            room: shelfRef.room_temp_days || 0,
-          },
-          storageTip: shelfRef.storage_tip || '',
+          shelfProfile,
+          storageTip,
+          shelfExplainText: buildShelfExplain(food, shelfProfile, storageTip),
         })
       }
     } catch (err) {
@@ -164,6 +189,7 @@ Page({
         this.setData({
           food,
           daysResult: app.calcDaysLeft(food.expiry_date),
+          shelfExplainText: buildShelfExplain(food, this.data.shelfProfile, this.data.storageTip),
         })
         this.resolveDisplayImage(food.image_url)
         if (typeof app.markFoodListDirty === 'function') {

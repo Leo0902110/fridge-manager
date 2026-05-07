@@ -76,6 +76,10 @@
       </view>
     </view>
     <text class="location-tip" wx:if="{{storageTip}}">{{storageTip}}</text>
+    <view class="shelf-explain-card" wx:if="{{shelfExplainText}}">
+      <text class="shelf-explain-label">为什么这样推荐</text>
+      <text class="shelf-explain-text">{{shelfExplainText}}</text>
+    </view>
   </view>
 
   <view class="list-group">

@@ -379,6 +379,11 @@ const foodAPI = {
   overview() {
     return request('/foods/stats/overview')
   },
+
+  // 根据今日行动食材生成菜谱
+  todayRecipe() {
+    return request('/foods/recipe/today')
+  },
   
   // 获取保质期参考
   getShelfLifeReference(foodName, category) {

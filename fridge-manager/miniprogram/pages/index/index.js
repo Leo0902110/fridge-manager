@@ -75,6 +75,9 @@ Page({
     undoText: '',
     undoFood: null,
     undoEventId: null,
+    recipeVisible: false,
+    recipeLoading: false,
+    todayRecipe: null,
     touchStartX: 0,
     touchStartY: 0,
     actionTouchIndex: -1,
@@ -456,6 +459,49 @@ Page({
       wx.showToast({ title: err.message || '撤销失败', icon: 'none' })
     }
   },
+
+  async generateTodayRecipe() {
+    if (this.data.recipeLoading) {
+      return
+    }
+
+    this.setData({
+      recipeVisible: true,
+      recipeLoading: true,
+      todayRecipe: null,
+    })
+
+    try {
+      const res = await api.food.todayRecipe()
+      if (res.success) {
+        this.setData({
+          todayRecipe: res.data,
+        })
+      } else {
+        throw new Error(res.message || '菜谱生成失败')
+      }
+    } catch (err) {
+      wx.showToast({
+        title: err.message || '菜谱生成失败',
+        icon: 'none',
+      })
+      this.setData({
+        recipeVisible: false,
+      })
+    } finally {
+      this.setData({
+        recipeLoading: false,
+      })
+    }
+  },
+
+  closeRecipeSheet() {
+    this.setData({
+      recipeVisible: false,
+    })
+  },
+
+  noop() {},
 
   /**
    * 跳转到详情页
