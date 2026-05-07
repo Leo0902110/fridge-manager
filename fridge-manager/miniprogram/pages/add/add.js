@@ -26,7 +26,9 @@ function defaultCategoryIndex(category) {
 function buildSelectedItem(result, sourceIndex, imagePath) {
   const category = result.category || '其他'
   const shelfLife = result.shelf_life_days || getDefaultShelfLife(result.name, category)
+  const hasAiShelfLife = !!result.shelf_life_days
   const recommendedLocation = result.recommended_location || getDefaultLocation(result.name, category)
+  const displayImagePath = result.displayImagePath || result.crop_image_url || result.image_url || imagePath || ''
   return {
     sourceIndex,
     name: result.name || '',
@@ -34,35 +36,87 @@ function buildSelectedItem(result, sourceIndex, imagePath) {
     categoryIndex: defaultCategoryIndex(category),
     confidence: result.confidence || 80,
     shelf_life_days: shelfLife ? String(shelfLife) : '',
+    shelf_life_manual: false,
+    shelf_life_source: hasAiShelfLife ? 'ai' : 'fallback',
+    ai_shelf_life_days: hasAiShelfLife ? String(result.shelf_life_days) : '',
+    ai_recommended_location: hasAiShelfLife ? recommendedLocation : '',
     shelfProfile: result.shelfProfile || null,
     recommended_location: recommendedLocation,
     storage_tip: result.storage_tip || getDefaultStorageTip(result.name, category, recommendedLocation),
     notes: '',
     imagePath: '',
+    displayImagePath,
     cropStatus: imagePath ? '使用原图' : '无图片',
   }
 }
 
 function getDefaultShelfLife(name, category) {
   const text = `${name || ''}${category || ''}`
+  if (text.indexOf('罐头') >= 0 || text.indexOf('密封') >= 0) {
+    return text.indexOf('开封') >= 0 ? 3 : 180
+  }
+  if (text.indexOf('菠萝') >= 0 || text.indexOf('凤梨') >= 0) {
+    return 5
+  }
   if (category === '熟食' || category === '剩菜' || COOKED_KEYWORDS.some(keyword => text.indexOf(keyword) >= 0)) {
     return 2
   }
   return ''
 }
 
+function getDefaultShelfLifeForLocation(name, category, location) {
+  const text = `${name || ''}${category || ''}`
+  const isOpened = ['开封', '已开', '打开', '切开', '切块', '剩余'].some(keyword => text.indexOf(keyword) >= 0)
+  const dryFoodKeywords = ['饼干', '方便面', '泡面', '挂面', '米', '面粉', '麦片', '燕麦', '坚果', '糖果', '巧克力', '零食', '茶叶', '咖啡', '饮料', '调味', '酱油', '醋']
+  const rootKeywords = ['土豆', '洋葱', '大蒜', '蒜', '姜', '南瓜', '红薯', '地瓜', '山药', '芋头']
+  const roomFruitKeywords = ['香蕉', '苹果', '橙', '橘', '柑', '梨', '柚子', '柠檬', '牛油果', '猕猴桃', '芒果']
+
+  if (location === 'room') {
+    if ((text.indexOf('罐头') >= 0 || text.indexOf('密封') >= 0) && !isOpened) return 180
+    if (dryFoodKeywords.some(keyword => text.indexOf(keyword) >= 0) && !isOpened) return 90
+    if (rootKeywords.some(keyword => text.indexOf(keyword) >= 0)) return 14
+    if (roomFruitKeywords.some(keyword => text.indexOf(keyword) >= 0) && !isOpened) return text.indexOf('香蕉') >= 0 ? 3 : 7
+    if (text.indexOf('面包') >= 0 || text.indexOf('吐司') >= 0) return 3
+    if (text.indexOf('鸡蛋') >= 0 || category === '蛋类') return 7
+    if (text.indexOf('菠萝') >= 0 || text.indexOf('凤梨') >= 0) return isOpened ? 1 : 2
+    if (category === '水果') return isOpened ? 1 : 2
+    if (category === '蔬菜') return 1
+    if (category === '肉类' || category === '海鲜' || category === '乳制品' || category === '豆制品' || category === '熟食' || category === '剩菜' || COOKED_KEYWORDS.some(keyword => text.indexOf(keyword) >= 0)) return 1
+    return ''
+  }
+
+  if (location === 'freezer') {
+    if (category === '肉类' || category === '海鲜') return 90
+    if (category === '熟食' || category === '剩菜') return 14
+    if (category === '水果' || category === '蔬菜') return 30
+  }
+
+  if (location === 'fridge') {
+    return getDefaultShelfLife(name, category)
+  }
+
+  return ''
+}
+
 function getDefaultLocation(name, category) {
   const text = `${name || ''}${category || ''}`
+  if ((text.indexOf('罐头') >= 0 || text.indexOf('密封') >= 0) && text.indexOf('开封') < 0) {
+    return 'room'
+  }
+  if (['饼干', '方便面', '泡面', '挂面', '米', '面粉', '麦片', '燕麦', '坚果', '糖果', '巧克力', '零食', '土豆', '洋葱', '大蒜', '姜', '南瓜', '红薯', '山药', '香蕉', '面包', '吐司'].some(keyword => text.indexOf(keyword) >= 0)) {
+    return 'room'
+  }
   if (category === '肉类' || category === '海鲜') {
     return 'freezer'
-  }
-  if (['土豆', '洋葱', '大蒜', '姜', '香蕉', '面包'].some(keyword => text.indexOf(keyword) >= 0)) {
-    return 'room'
   }
   return 'fridge'
 }
 
 function getDefaultStorageTip(name, category, location) {
+  const text = `${name || ''}${category || ''}`
+  if (text.indexOf('罐头') >= 0 || text.indexOf('密封') >= 0) {
+    return text.indexOf('开封') >= 0 ? '开封后冷藏尽快吃' : '未开封阴凉保存'
+  }
   if (category === '熟食' || category === '剩菜') {
     return '按整份熟食管理，建议两天内吃完'
   }
@@ -88,6 +142,58 @@ function getShelfLifeByLocation(profile, location) {
     return ''
   }
   return profile[location] || profile.fridge || profile.freezer || profile.room || ''
+}
+
+function getItemShelfLifeForLocation(item, location) {
+  if (item && item.shelf_life_manual && item.shelf_life_days) {
+    return item.shelf_life_days
+  }
+  if (item && item.shelf_life_source === 'ai') {
+    const aiLocation = item.ai_recommended_location || item.recommended_location
+    if (location === aiLocation && (item.ai_shelf_life_days || item.shelf_life_days)) {
+      return item.ai_shelf_life_days || item.shelf_life_days
+    }
+    return getShelfLifeByLocation(item.shelfProfile, location) || getDefaultShelfLifeForLocation(item.name, item.category, location) || ''
+  }
+  return getShelfLifeByLocation(item && item.shelfProfile, location) || getDefaultShelfLifeForLocation(item && item.name, item && item.category, location) || (item && item.shelf_life_days) || ''
+}
+
+function buildLocationDays(item) {
+  return {
+    fridge: getItemShelfLifeForLocation(item, 'fridge'),
+    freezer: getItemShelfLifeForLocation(item, 'freezer'),
+    room: getItemShelfLifeForLocation(item, 'room'),
+  }
+}
+
+function formatLocationDayLabel(days, location, item) {
+  if (days) {
+    return `${days}天`
+  }
+  const text = `${(item && item.name) || ''}${(item && item.category) || ''}`
+  if (location === 'room' && (item && (item.category === '肉类' || item.category === '海鲜' || item.category === '乳制品' || item.category === '豆制品' || item.category === '熟食' || item.category === '剩菜' || COOKED_KEYWORDS.some(keyword => text.indexOf(keyword) >= 0)))) {
+    return '不建议'
+  }
+  return '待确认'
+}
+
+function buildLocationDayLabels(locationDays, item) {
+  const days = locationDays || {}
+  return {
+    fridge: formatLocationDayLabel(days.fridge, 'fridge', item),
+    freezer: formatLocationDayLabel(days.freezer, 'freezer', item),
+    room: formatLocationDayLabel(days.room, 'room', item),
+  }
+}
+
+function applyLocationShelfLifeToItems(items, location) {
+  return items.map((item) => {
+    if (item.shelf_life_manual) {
+      return item
+    }
+    const shelfLife = getItemShelfLifeForLocation(item, location)
+    return shelfLife ? { ...item, shelf_life_days: String(shelfLife) } : item
+  })
 }
 
 function calcExpiryDate(days) {
@@ -159,6 +265,39 @@ Page({
       return
     }
 
+    const handleImagePath = (imagePath) => {
+      if (imagePath) {
+        this.recognizeSelectedImage(imagePath)
+      }
+    }
+    const handleChooseFail = (err) => {
+      const message = err && (err.errMsg || err.message || String(err))
+      if (message && message.indexOf('cancel') >= 0) {
+        return
+      }
+      console.error('选择图片失败:', err)
+      wx.showToast({
+        title: '无法打开相机，请检查权限或改用相册',
+        icon: 'none',
+      })
+    }
+    const fallbackChooseImage = () => {
+      wx.chooseImage({
+        count: 1,
+        sizeType: ['compressed'],
+        sourceType: ['camera', 'album'],
+        success: (res) => {
+          handleImagePath(res.tempFilePaths && res.tempFilePaths[0])
+        },
+        fail: handleChooseFail,
+      })
+    }
+
+    if (!wx.chooseMedia) {
+      fallbackChooseImage()
+      return
+    }
+
     wx.chooseMedia({
       count: 1,
       mediaType: ['image'],
@@ -166,7 +305,14 @@ Page({
       camera: 'back',
       success: async (res) => {
         const tempFilePath = res.tempFiles[0].tempFilePath
-        this.recognizeSelectedImage(tempFilePath)
+        handleImagePath(tempFilePath)
+      },
+      fail: (err) => {
+        const message = err && (err.errMsg || err.message || String(err))
+        if (message && message.indexOf('cancel') >= 0) {
+          return
+        }
+        fallbackChooseImage()
       },
     })
   },
@@ -201,6 +347,7 @@ Page({
         ...item,
         selected: result.mode !== 'whole',
         sourceIndex: index,
+        displayImagePath: item.crop_image_url || item.image_url || imagePath,
       }))
       const wholeItem = result.whole_food ? buildSelectedItem(result.whole_food, -1, imagePath) : null
       const shouldUseWhole = result.mode === 'whole' && wholeItem
@@ -316,11 +463,22 @@ Page({
     if (!item || !item.name) {
       return
     }
+    if (item.shelf_life_manual) {
+      return
+    }
+
+    const hasAiShelfLife = item.shelf_life_source === 'ai' && !!item.shelf_life_days
+
+    if (hasAiShelfLife) {
+      return
+    }
 
     const defaultShelfLife = getDefaultShelfLife(item.name, item.category)
     if (!item.shelf_life_days && defaultShelfLife) {
+      item.shelf_life_days = String(defaultShelfLife)
       this.setData({
         [`selectedItems[${index}].shelf_life_days`]: String(defaultShelfLife),
+        [`selectedItems[${index}].shelf_life_source`]: 'fallback',
       })
     }
 
@@ -329,9 +487,11 @@ Page({
       if (ref.success && ref.data.length > 0) {
         const shelfRef = ref.data[0]
         const profile = buildShelfProfile(shelfRef)
-        const shelfLife = getShelfLifeByLocation(profile, this.data.formData.location) || item.shelf_life_days || 7
+        const location = item.recommended_location || this.data.formData.location
+        const shelfLife = getShelfLifeByLocation(profile, location) || item.shelf_life_days || 7
         this.setData({
           [`selectedItems[${index}].shelf_life_days`]: String(shelfLife),
+          [`selectedItems[${index}].shelf_life_source`]: 'reference',
           [`selectedItems[${index}].shelfProfile`]: profile,
           [`selectedItems[${index}].recommended_location`]: shelfRef.recommended_location || item.recommended_location,
           [`selectedItems[${index}].storage_tip`]: shelfRef.storage_tip || item.storage_tip,
@@ -339,6 +499,7 @@ Page({
       } else if (!item.shelf_life_days) {
         this.setData({
           [`selectedItems[${index}].shelf_life_days`]: '7',
+          [`selectedItems[${index}].shelf_life_source`]: 'fallback',
         })
       }
     } catch (err) {
@@ -346,6 +507,7 @@ Page({
       if (!item.shelf_life_days) {
         this.setData({
           [`selectedItems[${index}].shelf_life_days`]: '7',
+          [`selectedItems[${index}].shelf_life_source`]: 'fallback',
         })
       }
     }
@@ -353,14 +515,21 @@ Page({
 
   buildDecisionItem(item, source) {
     const profile = item.shelfProfile || (source === 'manual' ? this.data.manualShelfProfile : null) || {}
-    const location = source === 'manual' ? this.data.formData.location : this.data.formData.location
-    const shelfLife = getShelfLifeByLocation(profile, location) || item.shelf_life_days || this.data.formData.shelf_life_days
+    const location = source === 'manual'
+      ? this.data.formData.location
+      : (item.recommended_location || this.data.formData.location || 'fridge')
+    const shelfLife = source === 'manual'
+      ? getShelfLifeByLocation(profile, location) || item.shelf_life_days || this.data.formData.shelf_life_days
+      : getItemShelfLifeForLocation({ ...item, shelfProfile: profile }, location) || this.data.formData.shelf_life_days
+    const locationDays = buildLocationDays({ ...item, shelfProfile: profile, shelf_life_days: shelfLife ? String(shelfLife) : item.shelf_life_days })
     return {
       ...item,
       source,
       shelfProfile: profile,
       location,
       shelf_life_days: shelfLife ? String(shelfLife) : '',
+      locationDays,
+      locationDayLabels: buildLocationDayLabels(locationDays, item),
       expiryPreview: shelfLife ? calcExpiryDate(shelfLife) : '',
       recommended_location: item.recommended_location || this.data.manualRecommendedLocation || getDefaultLocation(item.name, item.category),
       storage_tip: item.storage_tip || this.data.manualStorageTip || getDefaultStorageTip(item.name, item.category, location),
@@ -411,11 +580,38 @@ Page({
       return
     }
 
-    const shelfLife = getShelfLifeByLocation(item.shelfProfile, location) || item.shelf_life_days
+    const shelfLife = getItemShelfLifeForLocation(item, location)
+    const locationDays = buildLocationDays({ ...item, location, shelf_life_days: shelfLife ? String(shelfLife) : item.shelf_life_days })
     this.setData({
       'decisionItem.location': location,
       'decisionItem.shelf_life_days': shelfLife ? String(shelfLife) : '',
+      'decisionItem.locationDays': locationDays,
+      'decisionItem.locationDayLabels': buildLocationDayLabels(locationDays, item),
       'decisionItem.expiryPreview': shelfLife ? calcExpiryDate(shelfLife) : '',
+    })
+  },
+
+  onRecognitionImageError(e) {
+    const index = Number(e.currentTarget.dataset.index)
+    if (Number.isNaN(index)) return
+    this.setData({
+      [`recognitionResults[${index}].displayImagePath`]: '',
+    })
+  },
+
+  onSelectedImageError(e) {
+    const index = Number(e.currentTarget.dataset.index)
+    if (Number.isNaN(index)) return
+    this.setData({
+      [`selectedItems[${index}].displayImagePath`]: '',
+      [`selectedItems[${index}].imagePath`]: '',
+    })
+  },
+
+  onEditImageError() {
+    this.setData({
+      'editDraft.displayImagePath': '',
+      'editDraft.imagePath': '',
     })
   },
 
@@ -432,14 +628,19 @@ Page({
         storageSuggestion: `${LOCATION_LABELS[item.recommended_location] || '冷藏'} · ${item.storage_tip}`,
       })
     } else if (this.data.decisionIndex >= 0) {
+      const selectedItems = this.data.selectedItems.slice()
+      selectedItems[this.data.decisionIndex] = {
+        ...selectedItems[this.data.decisionIndex],
+        shelf_life_days: item.shelf_life_days,
+        recommended_location: item.recommended_location,
+        storage_tip: item.storage_tip,
+        shelfProfile: item.shelfProfile,
+        shelf_life_manual: !!item.shelf_life_manual,
+      }
       this.setData({
-        [`selectedItems[${this.data.decisionIndex}].shelf_life_days`]: item.shelf_life_days,
-        [`selectedItems[${this.data.decisionIndex}].recommended_location`]: item.recommended_location,
-        [`selectedItems[${this.data.decisionIndex}].storage_tip`]: item.storage_tip,
-        [`selectedItems[${this.data.decisionIndex}].shelfProfile`]: item.shelfProfile,
+        selectedItems: applyLocationShelfLifeToItems(selectedItems, item.location),
         'formData.location': item.location,
       })
-      this.applyLocationShelfLife(item.location)
     }
 
     this.closeDecisionSheet()
@@ -469,6 +670,7 @@ Page({
       success: (res) => {
         this.setData({
           [`selectedItems[${index}].imagePath`]: res.tempFilePath,
+          [`selectedItems[${index}].displayImagePath`]: res.tempFilePath,
           [`selectedItems[${index}].cropStatus`]: '已裁剪',
         })
       },
@@ -502,6 +704,7 @@ Page({
       success: (res) => {
         this.setData({
           'editDraft.imagePath': res.tempFilePath,
+          'editDraft.displayImagePath': res.tempFilePath,
           'editDraft.cropStatus': '已裁剪',
         })
       },
@@ -552,26 +755,46 @@ Page({
       return
     }
 
+    const shelfLifeDays = String(editDraft.shelf_life_days || '').replace(/\D/g, '')
+    const originalItem = this.data.selectedItems[editingIndex] || {}
+    const isManualShelfLife = !!editDraft.shelf_life_manual || shelfLifeDays !== String(originalItem.shelf_life_days || '')
+
     if (!editDraft.name.trim()) {
       wx.showToast({ title: '请输入食物名称', icon: 'none' })
       return
     }
 
-    if (!editDraft.shelf_life_days) {
+    if (!shelfLifeDays) {
       wx.showToast({ title: '请输入保质期', icon: 'none' })
       return
     }
 
-    this.setData({
-      [`selectedItems[${editingIndex}]`]: {
+    const selectedItems = this.data.selectedItems.slice()
+    const savedItem = {
         ...editDraft,
         name: editDraft.name.trim(),
+        shelf_life_days: shelfLifeDays,
+        shelf_life_manual: isManualShelfLife,
+        shelf_life_source: isManualShelfLife ? 'manual' : (editDraft.shelf_life_source || originalItem.shelf_life_source || 'fallback'),
         notes: (editDraft.notes || '').trim(),
-      },
+      }
+    selectedItems[editingIndex] = savedItem
+
+    const updates = {
+      selectedItems,
       editorVisible: false,
       editingIndex: -1,
       editDraft: null,
-    })
+    }
+    if (this.data.decisionVisible && this.data.decisionIndex === editingIndex) {
+      const decisionItem = this.buildDecisionItem(savedItem, this.data.decisionSource || 'item')
+      updates.decisionItem = decisionItem
+    }
+    if (savedItem.sourceIndex === -1 && this.data.entryMode === 'whole') {
+      updates.wholeItem = { ...savedItem }
+    }
+
+    this.setData(updates)
   },
 
   removeSelectedItem(e) {
@@ -631,16 +854,9 @@ Page({
   },
 
   applyLocationShelfLife(location) {
-    const updates = {}
-    this.data.selectedItems.forEach((item, index) => {
-      const shelfLife = getShelfLifeByLocation(item.shelfProfile, location)
-      if (shelfLife) {
-        updates[`selectedItems[${index}].shelf_life_days`] = String(shelfLife)
-      }
+    this.setData({
+      selectedItems: applyLocationShelfLifeToItems(this.data.selectedItems, location),
     })
-    if (Object.keys(updates).length > 0) {
-      this.setData(updates)
-    }
   },
 
   onInputChange(e) {
@@ -678,9 +894,21 @@ Page({
     }
 
     const field = e.currentTarget.dataset.field
+    const value = field === 'shelf_life_days'
+      ? String(e.detail.value || '').replace(/\D/g, '')
+      : e.detail.value
+    const updates = {
+      [`editDraft.${field}`]: value,
+    }
+    if (field === 'shelf_life_days') {
+      updates['editDraft.shelf_life_manual'] = true
+    }
     this.setData({
-      [`editDraft.${field}`]: e.detail.value,
+      ...updates,
     })
+    if (field === 'shelf_life_days') {
+      return value
+    }
   },
 
   onCategoryChange(e) {
@@ -844,11 +1072,22 @@ Page({
         })
       }
     } catch (err) {
-      console.error('查询手动保质期失败:', err)
+      console.warn('查询手动保质期失败，使用本地兜底:', err)
       if (lookupSeq === this.manualLookupSeq) {
+        const category = this.data.formData.category || CATEGORIES[this.data.categoryIndex] || '其他'
+        const fallbackLocation = getDefaultLocation(name, category)
+        const fallbackShelfLife = getDefaultShelfLifeForLocation(name, category, this.data.formData.location)
+          || getDefaultShelfLife(name, category)
+          || (category === '肉类' ? 3 : '')
         this.setData({
+          'formData.shelf_life_days': fallbackShelfLife ? String(fallbackShelfLife) : this.data.formData.shelf_life_days,
+          autoShelfLife: fallbackShelfLife || null,
+          manualShelfProfile: null,
+          manualRecommendedLocation: fallbackLocation,
+          manualStorageTip: getDefaultStorageTip(name, category, fallbackLocation),
+          storageSuggestion: `${LOCATION_LABELS[fallbackLocation] || '冷藏'}${fallbackShelfLife ? ` · ${fallbackShelfLife}天` : ''}（本地估算）`,
           manualLookupLoading: false,
-          manualSuggestionReady: false,
+          manualSuggestionReady: !!fallbackShelfLife,
         })
       }
     }

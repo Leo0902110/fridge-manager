@@ -7,16 +7,16 @@
   ],
   "window": {
     "backgroundTextStyle": "dark",
-    "navigationBarBackgroundColor": "#F2F2F7",
+    "navigationBarBackgroundColor": "#F8F4E9",
     "navigationBarTitleText": "冰箱管家",
     "navigationBarTextStyle": "black",
-    "backgroundColor": "#F2F2F7"
+    "backgroundColor": "#F8F4E9"
   },
   "tabBar": {
     "custom": true,
-    "color": "#8E8E93",
-    "selectedColor": "#007AFF",
-    "backgroundColor": "#FFFFFF",
+    "color": "#7A858E",
+    "selectedColor": "#5FAE86",
+    "backgroundColor": "#FFFDF7",
     "borderStyle": "black",
     "list": [
       {

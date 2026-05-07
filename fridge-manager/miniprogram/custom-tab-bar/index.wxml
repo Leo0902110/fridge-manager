@@ -1,3 +1,4 @@
+<!-- 核心风格优化点：底部导航使用半浮动保鲜盒胶囊，保持低版本可降级的柔光阴影。 -->
 <view class="tabbar-root">
   <view class="tabbar-shell">
     <view class="tabbar-indicator" style="{{indicatorStyle}}"></view>

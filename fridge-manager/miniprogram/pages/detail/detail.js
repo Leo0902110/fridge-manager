@@ -108,6 +108,19 @@ Page({
     }
   },
 
+  onFoodImageError(e) {
+    const { url } = e.currentTarget.dataset
+    if (!url || !this.data.food || this.data.food.image_url !== url) {
+      return
+    }
+
+    imageCache.clearImageCache(url)
+    this.setData({
+      'food.display_image_url': '',
+    })
+    this.resolveDisplayImage(url)
+  },
+
   async loadShelfProfile(food) {
     try {
       const ref = await api.food.getShelfLifeReference(food.name, food.category)

@@ -1,4 +1,5 @@
 <!--pages/add/add.wxml - 添加食物页面-->
+<!-- 核心风格优化点：拍照区、识别结果、清单、表单与底部操作区统一为圆角柔边和保鲜盒质感。 -->
 <view class="container tab-page add-page">
   <text class="large-title">添加</text>
   <view class="page-summary-row">
@@ -13,6 +14,7 @@
     <view class="camera-panel" bindtap="chooseImage" wx:if="{{!imagePath}}">
       <text class="camera-icon">📷</text>
       <text class="camera-title">拍照 / 相册</text>
+      <text class="camera-subtitle">轻触记录食材，AI 帮你整理冰箱</text>
     </view>
 
     <view class="image-preview" wx:else>
@@ -29,6 +31,7 @@
   </view>
 
   <view class="card empty-recognition-card" wx:if="{{imagePath && !recognizing && recognitionResults.length === 0 && !wholeItem}}">
+    <view class="empty-recognition-icon">?</view>
     <text class="empty-recognition-title">{{recognitionError ? '识别失败' : '未识别'}}</text>
     <view class="empty-recognition-actions">
       <button class="mini-btn" bindtap="retryRecognition" disabled="{{recognizing || submitting}}">重新识别</button>
@@ -72,7 +75,17 @@
         data-index="{{index}}"
       >
         <view class="result-check">{{item.selected ? '✓' : ''}}</view>
-        <text class="result-icon">{{getCategoryIcon(item.category)}}</text>
+        <view class="result-thumb">
+          <image
+            wx:if="{{item.displayImagePath}}"
+            class="result-thumb-image"
+            src="{{item.displayImagePath}}"
+            mode="aspectFill"
+            binderror="onRecognitionImageError"
+            data-index="{{index}}"
+          />
+          <text wx:else class="result-icon">{{getCategoryIcon(item.category)}}</text>
+        </view>
         <view class="list-main">
           <text class="list-title">{{item.name}}</text>
           <text class="list-subtitle">{{item.confidence}}% 匹配 · {{item.category}}</text>
@@ -96,7 +109,8 @@
         data-index="{{index}}"
       >
         <view class="selected-thumb">
-          <image wx:if="{{item.imagePath}}" class="selected-thumb-image" src="{{item.imagePath}}" mode="aspectFill" />
+          <image wx:if="{{item.displayImagePath}}" class="selected-thumb-image" src="{{item.displayImagePath}}" mode="aspectFill" binderror="onSelectedImageError" data-index="{{index}}" />
+          <image wx:elif="{{item.imagePath}}" class="selected-thumb-image" src="{{item.imagePath}}" mode="aspectFill" binderror="onSelectedImageError" data-index="{{index}}" />
           <image wx:elif="{{imagePath}}" class="selected-thumb-image muted" src="{{imagePath}}" mode="aspectFill" />
           <text wx:else class="selected-thumb-icon">{{getCategoryIcon(item.category)}}</text>
         </view>
@@ -266,73 +280,82 @@
         <view>
           <text class="editor-title">编辑</text>
         </view>
+        <button class="editor-header-save" bindtap="saveEditingItem" disabled="{{submitting}}">保存</button>
       </view>
 
-      <view class="editor-preview-row">
-        <view class="editor-preview">
-          <image wx:if="{{editDraft.imagePath}}" class="editor-preview-image" src="{{editDraft.imagePath}}" mode="aspectFill" />
-          <image wx:elif="{{imagePath}}" class="editor-preview-image muted" src="{{imagePath}}" mode="aspectFill" />
-          <text wx:else class="selected-thumb-icon">{{getCategoryIcon(editDraft.category)}}</text>
-        </view>
-        <view class="editor-preview-main">
-          <text class="editor-preview-title">{{editDraft.imagePath ? '局部图' : '原图'}}</text>
-          <button class="mini-btn editor-crop-btn" bindtap="cropEditingImage" disabled="{{submitting || !imagePath}}">裁剪</button>
-        </view>
-      </view>
-
-      <view class="field-group editor-fields">
-        <view class="field-row">
-          <text class="field-label">名称</text>
-          <input
-            class="field-control"
-            value="{{editDraft.name}}"
-            bindinput="onEditDraftInputChange"
-            data-field="name"
-            disabled="{{submitting}}"
-          />
+      <scroll-view class="editor-scroll" scroll-y>
+        <view class="editor-preview-row">
+          <view class="editor-preview">
+            <image wx:if="{{editDraft.displayImagePath}}" class="editor-preview-image" src="{{editDraft.displayImagePath}}" mode="aspectFill" binderror="onEditImageError" />
+            <image wx:elif="{{editDraft.imagePath}}" class="editor-preview-image" src="{{editDraft.imagePath}}" mode="aspectFill" binderror="onEditImageError" />
+            <image wx:elif="{{imagePath}}" class="editor-preview-image muted" src="{{imagePath}}" mode="aspectFill" />
+            <text wx:else class="selected-thumb-icon">{{getCategoryIcon(editDraft.category)}}</text>
+          </view>
+          <view class="editor-preview-main">
+            <text class="editor-preview-title">{{editDraft.imagePath ? '局部图' : '原图'}}</text>
+            <button class="mini-btn editor-crop-btn" bindtap="cropEditingImage" disabled="{{submitting || !imagePath}}">裁剪</button>
+          </view>
         </view>
 
-        <view class="field-row">
-          <text class="field-label">类别</text>
-          <picker
-            mode="selector"
-            range="{{categories}}"
-            value="{{editDraft.categoryIndex}}"
-            bindchange="onEditDraftCategoryChange"
-            disabled="{{submitting}}"
-          >
-            <view class="field-picker picker-display">
-              <text>{{editDraft.category}}</text>
-              <text class="chevron">›</text>
-            </view>
-          </picker>
-        </view>
+        <view class="field-group editor-fields">
+          <view class="field-row">
+            <text class="field-label">名称</text>
+            <input
+              class="field-control"
+              value="{{editDraft.name}}"
+              bindinput="onEditDraftInputChange"
+              data-field="name"
+              cursor-spacing="180"
+              disabled="{{submitting}}"
+            />
+          </view>
 
-        <view class="field-row">
-          <text class="field-label">天数</text>
-          <input
-            class="field-control"
-            type="number"
-            value="{{editDraft.shelf_life_days}}"
-            bindinput="onEditDraftInputChange"
-            data-field="shelf_life_days"
-            disabled="{{submitting}}"
-          />
-        </view>
+          <view class="field-row">
+            <text class="field-label">类别</text>
+            <picker
+              mode="selector"
+              range="{{categories}}"
+              value="{{editDraft.categoryIndex}}"
+              bindchange="onEditDraftCategoryChange"
+              disabled="{{submitting}}"
+            >
+              <view class="field-picker picker-display">
+                <text>{{editDraft.category}}</text>
+                <text class="chevron">›</text>
+              </view>
+            </picker>
+          </view>
 
-        <view class="field-row">
-          <text class="field-label">备注</text>
-          <textarea
-            class="field-textarea editor-notes"
-            value="{{editDraft.notes}}"
-            placeholder="可选"
-            bindinput="onEditDraftInputChange"
-            data-field="notes"
-            maxlength="100"
-            disabled="{{submitting}}"
-          />
+          <view class="field-row">
+            <text class="field-label">天数</text>
+            <input
+              class="field-control"
+              type="number"
+              value="{{editDraft.shelf_life_days}}"
+              bindinput="onEditDraftInputChange"
+              bindblur="onEditDraftInputChange"
+              bindconfirm="onEditDraftInputChange"
+              data-field="shelf_life_days"
+              cursor-spacing="180"
+              disabled="{{submitting}}"
+            />
+          </view>
+
+          <view class="field-row">
+            <text class="field-label">备注</text>
+            <textarea
+              class="field-textarea editor-notes"
+              value="{{editDraft.notes}}"
+              placeholder="可选"
+              bindinput="onEditDraftInputChange"
+              data-field="notes"
+              maxlength="100"
+              cursor-spacing="180"
+              disabled="{{submitting}}"
+            />
+          </view>
         </view>
-      </view>
+      </scroll-view>
 
       <view class="editor-actions">
         <button class="btn btn-outline editor-action-btn" bindtap="closeItemEditor">取消</button>
@@ -359,7 +382,7 @@
           data-location="fridge"
         >
           <text class="decision-option-main">🧊 冷藏</text>
-          <text class="decision-option-sub">{{decisionItem.shelfProfile.fridge || decisionItem.shelf_life_days || '--'}}天</text>
+          <text class="decision-option-sub">{{decisionItem.locationDayLabels.fridge}}</text>
         </view>
         <view
           class="decision-option {{decisionItem.location === 'freezer' ? 'active' : ''}}"
@@ -367,7 +390,7 @@
           data-location="freezer"
         >
           <text class="decision-option-main">❄️ 冷冻</text>
-          <text class="decision-option-sub">{{decisionItem.shelfProfile.freezer || '--'}}天</text>
+          <text class="decision-option-sub">{{decisionItem.locationDayLabels.freezer}}</text>
         </view>
         <view
           class="decision-option {{decisionItem.location === 'room' ? 'active' : ''}}"
@@ -375,7 +398,7 @@
           data-location="room"
         >
           <text class="decision-option-main">🌡️ 常温</text>
-          <text class="decision-option-sub">{{decisionItem.shelfProfile.room || '--'}}天</text>
+          <text class="decision-option-sub">{{decisionItem.locationDayLabels.room}}</text>
         </view>
       </view>
 

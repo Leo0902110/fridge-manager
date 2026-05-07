@@ -1,7 +1,7 @@
 // utils/api.js - API 调用封装
 
 const app = getApp()
-const DEFAULT_TIMEOUT = 10000
+const DEFAULT_TIMEOUT = 20000
 const UPLOAD_TIMEOUT = 20000
 const RECOGNITION_TIMEOUT = 60000
 const AUTH_TOKEN_KEY = 'FRIDGE_AUTH_TOKEN'
@@ -18,11 +18,40 @@ function cleanData(data = {}) {
 }
 
 function getApiBaseUrls() {
+  const isDevtools = wx.getSystemInfoSync().platform === 'devtools'
   const urls = [
     app.globalData.API_BASE_URL,
     ...(app.globalData.API_BASE_URL_FALLBACKS || []),
   ]
-  return urls.filter((url, index) => url && urls.indexOf(url) === index)
+  return urls.filter((url, index) => {
+    if (!url || urls.indexOf(url) !== index) {
+      return false
+    }
+    if (!isDevtools && isLocalhostApiUrl(url)) {
+      return false
+    }
+    return true
+  })
+}
+
+function isLocalhostApiUrl(url) {
+  return typeof url === 'string' && /^https?:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/.test(url)
+}
+
+function isDevtoolsPlatform() {
+  return wx.getSystemInfoSync().platform === 'devtools'
+}
+
+function isPrivateLanApiUrl(url) {
+  return typeof url === 'string' && /^http:\/\/(10\.|172\.(1[6-9]|2\d|3[0-1])\.|192\.168\.)/.test(url)
+}
+
+function buildNetworkFailMessage(err, fullUrl, fallback = '网络错误') {
+  const rawMessage = err.errMsg || fallback
+  if (!isDevtoolsPlatform() && isPrivateLanApiUrl(fullUrl)) {
+    return `${rawMessage}：${fullUrl}\n真机连不上电脑后端。请确认手机和电脑在同一 Wi‑Fi、微信已允许“本地网络”，且当前 Wi‑Fi 没有开启设备隔离。`
+  }
+  return `${rawMessage}：${fullUrl}`
 }
 
 function isPlaceholderApiUrl(url) {
@@ -214,7 +243,7 @@ function request(url, options = {}) {
           }
           reject({
             code: 500,
-            message: `${err.errMsg || '网络错误'}：${fullUrl}`,
+            message: buildNetworkFailMessage(err, fullUrl),
           })
         },
       })
@@ -265,7 +294,7 @@ function uploadFileWithFallback(url, imagePath, options = {}) {
             tryUpload(index + 1)
             return
           }
-          reject({ message: `${err.errMsg || options.failMessage || '上传失败'}：${fullUrl}` })
+          reject({ message: buildNetworkFailMessage(err, fullUrl, options.failMessage || '上传失败') })
         },
       })
     }

@@ -2,7 +2,8 @@
 const PRODUCTION_API_BASE_URL = 'https://api.your-domain.com/api/v1'
 const DEVTOOLS_API_BASE_URL = 'http://127.0.0.1:8000/api/v1'
 const LOCALHOST_API_BASE_URL = 'http://localhost:8000/api/v1'
-const LAN_API_BASE_URL = 'http://192.168.1.250:8000/api/v1'
+const LAN_API_BASE_URL = 'http://10.244.244.225:8000/api/v1'
+const TUNNEL_API_BASE_URL = 'https://folders-fruits-monday-yes.trycloudflare.com/api/v1'
 
 function getMiniProgramEnv() {
   try {
@@ -28,7 +29,7 @@ function getInitialApiBaseUrl() {
   }
   return wx.getSystemInfoSync().platform === 'devtools'
     ? DEVTOOLS_API_BASE_URL
-    : LAN_API_BASE_URL
+    : TUNNEL_API_BASE_URL
 }
 
 function getApiBaseUrlFallbacks() {
@@ -36,8 +37,8 @@ function getApiBaseUrlFallbacks() {
     return []
   }
   return wx.getSystemInfoSync().platform === 'devtools'
-    ? [LOCALHOST_API_BASE_URL, LAN_API_BASE_URL]
-    : [DEVTOOLS_API_BASE_URL, LOCALHOST_API_BASE_URL]
+    ? [LOCALHOST_API_BASE_URL, LAN_API_BASE_URL, TUNNEL_API_BASE_URL]
+    : []
 }
 
 App({

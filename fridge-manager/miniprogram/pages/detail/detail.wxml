@@ -1,4 +1,5 @@
 <!--pages/detail/detail.wxml - 食物详情页-->
+<!-- 核心风格优化点：详情摘要卡模拟单个保鲜盒，状态标签和进度条突出保质期信息层级。 -->
 <view class="container" wx:if="{{loading}}">
   <view class="detail-skeleton-title skeleton-line skeleton-line-large mb-16"></view>
   <view class="detail-skeleton-subtitle skeleton-line skeleton-line-medium mb-32"></view>
@@ -35,7 +36,7 @@
   </view>
 
   <view class="card summary-card">
-    <image class="detail-food-image" wx:if="{{food.display_image_url}}" src="{{food.display_image_url}}" mode="aspectFill" />
+    <image class="detail-food-image" wx:if="{{food.display_image_url}}" src="{{food.display_image_url}}" mode="aspectFill" binderror="onFoodImageError" data-url="{{food.image_url}}" />
     <view class="summary-top">
       <view class="summary-icon">
         <text>{{getCategoryIcon(food.category)}}</text>
@@ -50,6 +51,9 @@
     <view class="summary-bottom">
       <text class="summary-label">到期</text>
       <text class="summary-date">{{food.expiry_date}}</text>
+      <view class="detail-freshness detail-{{daysResult.type}}">
+        <view class="detail-freshness-fill"></view>
+      </view>
     </view>
   </view>
 

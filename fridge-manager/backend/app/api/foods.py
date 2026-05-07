@@ -106,7 +106,7 @@ async def find_shelf_life_reference(
             "豆制品": "豆腐",
             "主食": "米饭",
             "蔬菜": "白菜",
-            "水果": "苹果",
+            "水果": "常见水果",
         }
         default_name = category_defaults.get(category)
         if default_name:

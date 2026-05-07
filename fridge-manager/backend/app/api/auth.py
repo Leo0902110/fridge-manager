@@ -45,8 +45,11 @@ async def exchange_code_for_openid(code: str, request: Request) -> dict:
     appid = os.getenv("WECHAT_APPID", "").strip()
     secret = os.getenv("WECHAT_APP_SECRET", "").strip()
 
+    if allow_dev_login():
+        return {"openid": os.getenv("DEV_OPENID", "local-dev-openid")}
+
     if not appid or not secret:
-        if allow_dev_login() or is_local_request(request):
+        if is_local_request(request):
             return {"openid": os.getenv("DEV_OPENID", "local-dev-openid")}
         raise HTTPException(status_code=500, detail="未配置 WECHAT_APPID / WECHAT_APP_SECRET")
 

@@ -76,6 +76,9 @@ Page({
     undoFood: null,
     undoEventId: null,
     touchStartX: 0,
+    touchStartY: 0,
+    actionTouchIndex: -1,
+    actionTouchMoved: false,
     filter: 'all',
     loading: false,
     refreshing: false,
@@ -150,7 +153,9 @@ Page({
           })
 
         const expiredFoods = foodList.filter(food => food.riskType === 'expired')
-        const actionFoods = foodList.filter(food => food.riskType === 'warning' || (food.riskType !== 'expired' && isCookedFood(food) && food.location === 'fridge'))
+        const actionFoods = foodList
+          .filter(food => food.riskType === 'warning' || (food.riskType !== 'expired' && isCookedFood(food) && food.location === 'fridge'))
+          .map(food => ({ ...food, swipeOffset: 0, swipeMoving: false, swipeDirection: '' }))
         const activeColdList = foodList.filter(food => food.location !== 'freezer')
         const freezerList = foodList.filter(food => food.location === 'freezer')
         const filteredInventory = this.filterInventory(this.data.inventoryZone, this.data.quickFilter, activeColdList, freezerList)
@@ -269,20 +274,136 @@ Page({
     })
   },
 
+  onFoodImageError(e) {
+    const { id, url } = e.currentTarget.dataset
+    if (!id || !url) {
+      return
+    }
+
+    imageCache.clearImageCache(url)
+    const clearImage = (list) => list.map((item) => (
+      Number(item.id) === Number(id) && item.image_url === url
+        ? { ...item, display_image_url: '' }
+        : item
+    ))
+
+    const foodList = clearImage(this.data.foodList)
+    this.setData({
+      foodList,
+      actionFoods: clearImage(this.data.actionFoods),
+      expiredFoods: clearImage(this.data.expiredFoods),
+      activeColdList: clearImage(this.data.activeColdList),
+      freezerList: clearImage(this.data.freezerList),
+      filteredInventory: clearImage(this.data.filteredInventory),
+    })
+
+    this.resolveDisplayImages(foodList)
+  },
+
   onActionTouchStart(e) {
+    const index = Number(e.currentTarget.dataset.index)
+    this.resetActionSwipe(index)
     this.setData({
       touchStartX: e.changedTouches[0].clientX,
+      touchStartY: e.changedTouches[0].clientY,
+      actionTouchIndex: index,
+      actionTouchMoved: false,
+      [`actionFoods[${index}].swipeMoving`]: true,
+    })
+  },
+
+  onActionTouchMove(e) {
+    const index = Number(e.currentTarget.dataset.index)
+    if (index !== this.data.actionTouchIndex || !this.data.actionFoods[index]) {
+      return
+    }
+
+    const touch = e.changedTouches[0]
+    const deltaX = touch.clientX - this.data.touchStartX
+    const deltaY = touch.clientY - this.data.touchStartY
+    if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > 10) {
+      return
+    }
+
+    const maxOffset = 118
+    const offset = Math.max(-maxOffset, Math.min(maxOffset, deltaX))
+    const direction = offset > 8 ? 'eat' : offset < -8 ? 'discard' : ''
+
+    this.setData({
+      actionTouchMoved: Math.abs(offset) > 10,
+      [`actionFoods[${index}].swipeOffset`]: offset,
+      [`actionFoods[${index}].swipeDirection`]: direction,
     })
   },
 
   onActionTouchEnd(e) {
-    const deltaX = e.changedTouches[0].clientX - this.data.touchStartX
-    const id = e.currentTarget.dataset.id
-    if (deltaX > 80) {
-      this.completeFood(id, 'eat')
-    } else if (deltaX < -80) {
-      this.completeFood(id, 'discard')
+    const index = Number(e.currentTarget.dataset.index)
+    const item = this.data.actionFoods[index]
+    if (!item) {
+      return
     }
+
+    const offset = Number(item.swipeOffset || 0)
+    const threshold = 72
+    if (offset > threshold) {
+      this.animateActionCommit(index, 'eat')
+    } else if (offset < -threshold) {
+      this.animateActionCommit(index, 'discard')
+    } else {
+      if (this.data.actionTouchMoved) {
+        this.suppressActionTapUntil = Date.now() + 320
+      }
+      this.resetActionSwipe(index)
+    }
+  },
+
+  handleActionTap(e) {
+    if (this.data.actionTouchMoved || Date.now() < (this.suppressActionTapUntil || 0)) {
+      const index = Number(e.currentTarget.dataset.index)
+      this.resetActionSwipe(index)
+      return
+    }
+    this.goToDetail(e)
+  },
+
+  resetActionSwipe(index = -1) {
+    const updates = {
+      actionTouchIndex: -1,
+      actionTouchMoved: false,
+    }
+    const resetOne = (itemIndex) => {
+      if (itemIndex >= 0 && this.data.actionFoods[itemIndex]) {
+        updates[`actionFoods[${itemIndex}].swipeOffset`] = 0
+        updates[`actionFoods[${itemIndex}].swipeMoving`] = false
+        updates[`actionFoods[${itemIndex}].swipeDirection`] = ''
+      }
+    }
+
+    if (index >= 0) {
+      resetOne(index)
+    } else {
+      this.data.actionFoods.forEach((_, itemIndex) => resetOne(itemIndex))
+    }
+    this.setData(updates)
+  },
+
+  animateActionCommit(index, type) {
+    const item = this.data.actionFoods[index]
+    if (!item) {
+      return
+    }
+    const commitOffset = type === 'discard' ? -180 : 180
+    this.setData({
+      [`actionFoods[${index}].swipeOffset`]: commitOffset,
+      [`actionFoods[${index}].swipeMoving`]: false,
+      [`actionFoods[${index}].swipeDirection`]: type,
+      actionTouchIndex: -1,
+      actionTouchMoved: true,
+    })
+    this.suppressActionTapUntil = Date.now() + 500
+    setTimeout(() => {
+      this.completeFood(item.id, type)
+    }, 180)
   },
 
   async completeFood(id, type) {

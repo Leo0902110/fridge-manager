@@ -1,4 +1,5 @@
 <!--pages/settings/settings.wxml - 设置页面-->
+<!-- 核心风格优化点：个人卡、统计卡、设置列表使用统一保鲜盒卡片与柔和功能色。 -->
 <view class="container tab-page">
   <text class="large-title">设置</text>
 
