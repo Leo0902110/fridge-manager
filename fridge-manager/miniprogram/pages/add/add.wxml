@@ -89,6 +89,9 @@
         <view class="list-main">
           <text class="list-title">{{item.name}}</text>
           <text class="list-subtitle">{{item.confidence}}% 匹配 · {{item.category}}</text>
+          <view class="freshness-row" wx:if="{{item.freshness_level}}">
+            <text class="freshness-chip freshness-{{item.freshness_level}}">{{item.freshness_label || getFreshnessLabel(item.freshness_level)}}{{item.freshness_score ? ' · ' + item.freshness_score + '分' : ''}}</text>
+          </view>
         </view>
         <text class="result-state">{{item.selected ? '已选' : '选择'}}</text>
       </view>
@@ -126,6 +129,10 @@
             <block wx:if="{{item.recommended_location}}">
               <text class="selected-dot">·</text>
               <text class="selected-meta">{{getLocationText(item.recommended_location)}}</text>
+            </block>
+            <block wx:if="{{item.freshness_level}}">
+              <text class="selected-dot">·</text>
+              <text class="selected-meta freshness-text">{{item.freshness_label || getFreshnessLabel(item.freshness_level)}}</text>
             </block>
           </view>
         </view>
@@ -293,6 +300,7 @@
           </view>
           <view class="editor-preview-main">
             <text class="editor-preview-title">{{editDraft.imagePath ? '局部图' : '原图'}}</text>
+            <text class="editor-freshness" wx:if="{{editDraft.freshness_level}}">{{editDraft.freshness_label || getFreshnessLabel(editDraft.freshness_level)}}{{editDraft.freshness_description ? ' · ' + editDraft.freshness_description : ''}}</text>
             <button class="mini-btn editor-crop-btn" bindtap="cropEditingImage" disabled="{{submitting || !imagePath}}">裁剪</button>
           </view>
         </view>
@@ -370,6 +378,7 @@
       <view class="decision-header">
         <view>
           <text class="decision-title">{{decisionItem.name}}</text>
+          <text class="decision-freshness" wx:if="{{decisionItem.freshness_level}}">新鲜度：{{decisionItem.freshness_label || getFreshnessLabel(decisionItem.freshness_level)}}{{decisionItem.freshness_description ? ' · ' + decisionItem.freshness_description : ''}}</text>
         </view>
       </view>
 

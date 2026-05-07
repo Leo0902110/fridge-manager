@@ -1,0 +1,216 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2200" height="1320" viewBox="0 0 2200 1320">
+  <defs>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#495057" flood-opacity="0.10"/>
+    </filter>
+    <marker id="arrow" markerWidth="14" markerHeight="14" refX="12" refY="7" orient="auto" markerUnits="strokeWidth">
+      <path d="M2,2 L12,7 L2,12 Z" fill="#5FAE86"/>
+    </marker>
+    <marker id="arrowWarning" markerWidth="14" markerHeight="14" refX="12" refY="7" orient="auto" markerUnits="strokeWidth">
+      <path d="M2,2 L12,7 L2,12 Z" fill="#F5B86E"/>
+    </marker>
+    <marker id="arrowDanger" markerWidth="14" markerHeight="14" refX="12" refY="7" orient="auto" markerUnits="strokeWidth">
+      <path d="M2,2 L12,7 L2,12 Z" fill="#D86464"/>
+    </marker>
+    <style>
+      text { font-family: 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif; }
+    </style>
+  </defs>
+  <rect width="100%" height="100%" fill="#F8F4E9"/>
+
+<circle cx="1980" cy="110" r="105" fill="#AEE0C4" opacity="0.58"/>
+<circle cx="2070" cy="232" r="48" fill="#F5B86E" opacity="0.42"/>
+<circle cx="120" cy="1180" r="120" fill="#EAF6EF" opacity="0.78"/>
+<text x="110" y="88" text-anchor="start" font-size="48" font-weight="900" fill="#2D343A">从拍照入库到临期处理的交互闭环</text>
+<text x="112" y="142" text-anchor="start" font-size="25" font-weight="600" fill="#5FAE86">冰箱管家 IXD Flow · 轻氧保鲜盒风格</text>
+<rect x="1510" y="66" width="150" height="46" rx="23.0" fill="#DFF2E7" stroke="#5FAE86" stroke-width="2"/>
+<text x="1585.0" y="99.0" text-anchor="middle" font-size="24" font-weight="800" fill="#2D343A">主流程</text>
+<rect x="1680" y="66" width="150" height="46" rx="23.0" fill="#FFF3E0" stroke="#F5B86E" stroke-width="2"/>
+<text x="1755.0" y="99.0" text-anchor="middle" font-size="24" font-weight="800" fill="#2D343A">异常兜底</text>
+<rect x="1850" y="66" width="150" height="46" rx="23.0" fill="#FFEBEE" stroke="#D86464" stroke-width="2"/>
+<text x="1925.0" y="99.0" text-anchor="middle" font-size="24" font-weight="800" fill="#2D343A">风险提醒</text>
+<rect x="80" y="190" width="2040" height="470" rx="40" fill="#FFFDF7" opacity="0.55" stroke="#FFFFFF" stroke-width="2"/>
+<text x="120" y="240" text-anchor="start" font-size="28" font-weight="900" fill="#5FAE86">01 入库流程</text>
+<rect x="80" y="720" width="2040" height="500" rx="40" fill="#FFFDF7" opacity="0.55" stroke="#FFFFFF" stroke-width="2"/>
+<text x="120" y="770" text-anchor="start" font-size="28" font-weight="900" fill="#5FAE86">02 管理闭环</text>
+<g id="start">
+<rect x="130" y="330" width="180" height="100" rx="28" fill="#95D2B3" stroke="#5FAE86" stroke-width="3" filter="url(#softShadow)"/>
+<text x="220.0" y="373.0" text-anchor="middle" font-size="25" font-weight="700" fill="#2D343A">用户进入</text>
+<text x="220.0" y="411.0" text-anchor="middle" font-size="25" font-weight="700" fill="#2D343A">冰箱管家</text>
+</g>
+<g id="home">
+<rect x="370" y="330" width="180" height="100" rx="28" fill="#FFFDF7" stroke="#95D2B3" stroke-width="3" filter="url(#softShadow)"/>
+<text x="460.0" y="373.0" text-anchor="middle" font-size="25" font-weight="700" fill="#2D343A">首页</text>
+<text x="460.0" y="411.0" text-anchor="middle" font-size="25" font-weight="700" fill="#2D343A">库存概览</text>
+</g>
+<g id="capture">
+<rect x="610" y="330" width="200" height="100" rx="28" fill="#EEF8F2" stroke="#95D2B3" stroke-width="3" filter="url(#softShadow)"/>
+<text x="710.0" y="373.0" text-anchor="middle" font-size="25" font-weight="700" fill="#2D343A">添加页</text>
+<text x="710.0" y="411.0" text-anchor="middle" font-size="25" font-weight="700" fill="#2D343A">拍照 / 相册</text>
+</g>
+<g id="ai">
+<rect x="870" y="330" width="230" height="100" rx="28" fill="#EAF6EF" stroke="#5FAE86" stroke-width="3" filter="url(#softShadow)"/>
+<text x="985.0" y="373.0" text-anchor="middle" font-size="24" font-weight="700" fill="#2D343A">AI 识别</text>
+<text x="985.0" y="411.0" text-anchor="middle" font-size="24" font-weight="700" fill="#2D343A">名称 / 类别 / 置信度</text>
+</g>
+<g id="recognition">
+<polygon points="1220,315.0 1310.0,380 1220,445.0 1130.0,380" fill="#FBF7EC" stroke="#B8C7B8" stroke-width="3" filter="url(#softShadow)"/>
+<text x="1220" y="374" text-anchor="middle" font-size="27" font-weight="800" fill="#2D343A">识别</text>
+<text x="1220" y="412" text-anchor="middle" font-size="27" font-weight="800" fill="#2D343A">成功？</text>
+</g>
+<g id="mode">
+<polygon points="1475,315.0 1565.0,380 1475,445.0 1385.0,380" fill="#FBF7EC" stroke="#B8C7B8" stroke-width="3" filter="url(#softShadow)"/>
+<text x="1475" y="374" text-anchor="middle" font-size="27" font-weight="800" fill="#2D343A">入库</text>
+<text x="1475" y="412" text-anchor="middle" font-size="27" font-weight="800" fill="#2D343A">方式</text>
+</g>
+<g id="whole">
+<rect x="1610" y="275" width="210" height="90" rx="28" fill="#FFFDF7" stroke="#D8D0BD" stroke-width="3" filter="url(#softShadow)"/>
+<text x="1715.0" y="313.0" text-anchor="middle" font-size="23" font-weight="700" fill="#2D343A">整份熟食</text>
+<text x="1715.0" y="351.0" text-anchor="middle" font-size="23" font-weight="700" fill="#2D343A">整体入库</text>
+</g>
+<g id="split">
+<rect x="1610" y="405" width="210" height="90" rx="28" fill="#FFFDF7" stroke="#D8D0BD" stroke-width="3" filter="url(#softShadow)"/>
+<text x="1715.0" y="443.0" text-anchor="middle" font-size="23" font-weight="700" fill="#2D343A">拆分食材</text>
+<text x="1715.0" y="481.0" text-anchor="middle" font-size="23" font-weight="700" fill="#2D343A">生成清单</text>
+</g>
+<g id="storage">
+<rect x="1880" y="330" width="190" height="100" rx="28" fill="#F6F1E4" stroke="#95D2B3" stroke-width="3" filter="url(#softShadow)"/>
+<text x="1975.0" y="373.0" text-anchor="middle" font-size="23" font-weight="700" fill="#2D343A">确认保存</text>
+<text x="1975.0" y="411.0" text-anchor="middle" font-size="23" font-weight="700" fill="#2D343A">冷藏/冷冻/常温</text>
+</g>
+<g id="fallback">
+<rect x="1110" y="535" width="220" height="90" rx="28" fill="#FFF3E0" stroke="#F5B86E" stroke-width="3" filter="url(#softShadow)"/>
+<text x="1220.0" y="573.0" text-anchor="middle" font-size="23" font-weight="700" fill="#2D343A">异常兜底</text>
+<text x="1220.0" y="611.0" text-anchor="middle" font-size="23" font-weight="700" fill="#2D343A">重新识别 / 手动输入</text>
+</g>
+<g id="expiry">
+<rect x="1510" y="535" width="220" height="90" rx="28" fill="#FFFDF7" stroke="#D8D0BD" stroke-width="3" filter="url(#softShadow)"/>
+<text x="1620.0" y="573.0" text-anchor="middle" font-size="23" font-weight="700" fill="#2D343A">自动计算</text>
+<text x="1620.0" y="611.0" text-anchor="middle" font-size="23" font-weight="700" fill="#2D343A">保质期与到期日</text>
+</g>
+<g id="save">
+<rect x="1880" y="535" width="190" height="90" rx="28" fill="#DFF2E7" stroke="#5FAE86" stroke-width="3" filter="url(#softShadow)"/>
+<text x="1975.0" y="590.0" text-anchor="middle" font-size="27" font-weight="700" fill="#2D343A">保存入库</text>
+</g>
+<path d="M310,380 L370,380" fill="none" stroke="#5FAE86" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<path d="M550,380 L610,380" fill="none" stroke="#5FAE86" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<path d="M810,380 L870,380" fill="none" stroke="#5FAE86" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<path d="M1100,380 L1130,380" fill="none" stroke="#5FAE86" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<path d="M1310,380 L1385,380" fill="none" stroke="#5FAE86" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<rect x="1315.0" y="324" width="70" height="38" rx="19" fill="#F8F4E9" opacity="0.96"/>
+<text x="1350" y="352" text-anchor="middle" font-size="22" font-weight="800" fill="#5FAE86">成功</text>
+<path d="M1565,380 L1588,380 L1588,320 L1610,320" fill="none" stroke="#5FAE86" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<rect x="1553.0" y="264" width="70" height="38" rx="19" fill="#F8F4E9" opacity="0.96"/>
+<text x="1588" y="292" text-anchor="middle" font-size="22" font-weight="800" fill="#5FAE86">整份</text>
+<path d="M1565,380 L1588,380 L1588,450 L1610,450" fill="none" stroke="#5FAE86" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<rect x="1553.0" y="464" width="70" height="38" rx="19" fill="#F8F4E9" opacity="0.96"/>
+<text x="1588" y="492" text-anchor="middle" font-size="22" font-weight="800" fill="#5FAE86">拆分</text>
+<path d="M1820,320 L1850,320 L1850,380 L1880,380" fill="none" stroke="#5FAE86" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<path d="M1820,450 L1850,450 L1850,380 L1880,380" fill="none" stroke="#5FAE86" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<path d="M1220,445 L1220,535" fill="none" stroke="#F5B86E" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowWarning)" stroke-dasharray="12 10"/>
+<rect x="1225.0" y="464" width="70" height="38" rx="19" fill="#F8F4E9" opacity="0.96"/>
+<text x="1260" y="492" text-anchor="middle" font-size="22" font-weight="800" fill="#F5B86E">失败</text>
+<path d="M1330,580 L1450,580 L1510,580" fill="none" stroke="#F5B86E" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowWarning)" stroke-dasharray="12 10"/>
+<path d="M2070,380 L2100,380 L2100,580 L2070,580" fill="none" stroke="#5FAE86" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<path d="M1730,580 L1880,580" fill="none" stroke="#5FAE86" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<g id="refresh">
+<rect x="130" y="885" width="200" height="100" rx="28" fill="#FFFDF7" stroke="#95D2B3" stroke-width="3" filter="url(#softShadow)"/>
+<text x="230.0" y="928.0" text-anchor="middle" font-size="25" font-weight="700" fill="#2D343A">回到首页</text>
+<text x="230.0" y="966.0" text-anchor="middle" font-size="25" font-weight="700" fill="#2D343A">刷新库存</text>
+</g>
+<g id="risk">
+<polygon points="485,870.0 575.0,935 485,1000.0 395.0,935" fill="#FBF7EC" stroke="#B8C7B8" stroke-width="3" filter="url(#softShadow)"/>
+<text x="485" y="929" text-anchor="middle" font-size="27" font-weight="800" fill="#2D343A">食物状态</text>
+<text x="485" y="967" text-anchor="middle" font-size="27" font-weight="800" fill="#2D343A">风险判断</text>
+</g>
+<g id="fresh">
+<rect x="640" y="785" width="200" height="86" rx="28" fill="#E8F5E9" stroke="#6E9B3E" stroke-width="3" filter="url(#softShadow)"/>
+<text x="740.0" y="821.0" text-anchor="middle" font-size="23" font-weight="700" fill="#2D343A">新鲜</text>
+<text x="740.0" y="859.0" text-anchor="middle" font-size="23" font-weight="700" fill="#2D343A">绿色状态</text>
+</g>
+<g id="near">
+<rect x="640" y="910" width="200" height="86" rx="28" fill="#FFF3E0" stroke="#F5B86E" stroke-width="3" filter="url(#softShadow)"/>
+<text x="740.0" y="946.0" text-anchor="middle" font-size="23" font-weight="700" fill="#2D343A">临期</text>
+<text x="740.0" y="984.0" text-anchor="middle" font-size="23" font-weight="700" fill="#2D343A">暖橙倒计时</text>
+</g>
+<g id="expired">
+<rect x="640" y="1035" width="200" height="86" rx="28" fill="#FFEBEE" stroke="#D86464" stroke-width="3" filter="url(#softShadow)"/>
+<text x="740.0" y="1071.0" text-anchor="middle" font-size="23" font-weight="700" fill="#2D343A">过期</text>
+<text x="740.0" y="1109.0" text-anchor="middle" font-size="23" font-weight="700" fill="#2D343A">柔红警示</text>
+</g>
+<g id="detail">
+<rect x="950" y="910" width="210" height="100" rx="28" fill="#FFFDF7" stroke="#95D2B3" stroke-width="3" filter="url(#softShadow)"/>
+<text x="1055.0" y="953.0" text-anchor="middle" font-size="25" font-weight="700" fill="#2D343A">详情页</text>
+<text x="1055.0" y="991.0" text-anchor="middle" font-size="25" font-weight="700" fill="#2D343A">查看食物信息</text>
+</g>
+<g id="handle">
+<polygon points="1310,895.0 1400.0,960 1310,1025.0 1220.0,960" fill="#FBF7EC" stroke="#B8C7B8" stroke-width="3" filter="url(#softShadow)"/>
+<text x="1310" y="954" text-anchor="middle" font-size="27" font-weight="800" fill="#2D343A">用户</text>
+<text x="1310" y="992" text-anchor="middle" font-size="27" font-weight="800" fill="#2D343A">处理</text>
+</g>
+<g id="location">
+<rect x="1480" y="785" width="220" height="86" rx="28" fill="#F6F1E4" stroke="#95D2B3" stroke-width="3" filter="url(#softShadow)"/>
+<text x="1590.0" y="821.0" text-anchor="middle" font-size="22" font-weight="700" fill="#2D343A">调整保存方式</text>
+<text x="1590.0" y="859.0" text-anchor="middle" font-size="22" font-weight="700" fill="#2D343A">重新计算</text>
+</g>
+<g id="eat">
+<rect x="1480" y="925" width="220" height="86" rx="28" fill="#DFF2E7" stroke="#5FAE86" stroke-width="3" filter="url(#softShadow)"/>
+<text x="1590.0" y="961.0" text-anchor="middle" font-size="23" font-weight="700" fill="#2D343A">吃完</text>
+<text x="1590.0" y="999.0" text-anchor="middle" font-size="23" font-weight="700" fill="#2D343A">确认 + 可撤销</text>
+</g>
+<g id="remove">
+<rect x="1480" y="1065" width="220" height="86" rx="28" fill="#FFEBEE" stroke="#D86464" stroke-width="3" filter="url(#softShadow)"/>
+<text x="1590.0" y="1101.0" text-anchor="middle" font-size="22" font-weight="700" fill="#2D343A">丢弃 / 删除</text>
+<text x="1590.0" y="1139.0" text-anchor="middle" font-size="22" font-weight="700" fill="#2D343A">确认防误操作</text>
+</g>
+<g id="stats">
+<rect x="1840" y="925" width="230" height="100" rx="28" fill="#EEF8F2" stroke="#5FAE86" stroke-width="3" filter="url(#softShadow)"/>
+<text x="1955.0" y="968.0" text-anchor="middle" font-size="22" font-weight="700" fill="#2D343A">统计页</text>
+<text x="1955.0" y="1006.0" text-anchor="middle" font-size="22" font-weight="700" fill="#2D343A">总记录 / 已吃完 / 已过期</text>
+</g>
+<g id="done">
+<rect x="1840" y="1085" width="230" height="86" rx="28" fill="#FFFDF7" stroke="#95D2B3" stroke-width="3" filter="url(#softShadow)"/>
+<text x="1955.0" y="1121.0" text-anchor="middle" font-size="23" font-weight="700" fill="#2D343A">返回首页</text>
+<text x="1955.0" y="1159.0" text-anchor="middle" font-size="23" font-weight="700" fill="#2D343A">继续管理</text>
+</g>
+<g id="net">
+<rect x="950" y="1120" width="230" height="86" rx="28" fill="#FFF3E0" stroke="#F5B86E" stroke-width="3" filter="url(#softShadow)"/>
+<text x="1065.0" y="1156.0" text-anchor="middle" font-size="23" font-weight="700" fill="#2D343A">兜底反馈</text>
+<text x="1065.0" y="1194.0" text-anchor="middle" font-size="23" font-weight="700" fill="#2D343A">明确原因 + 重试</text>
+</g>
+<path d="M1975,625 L1975,690 L230,690 L230,885" fill="none" stroke="#5FAE86" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<path d="M330,935 L395,935" fill="none" stroke="#5FAE86" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<path d="M575,905 L610,905 L610,828 L640,828" fill="none" stroke="#5FAE86" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<rect x="575.0" y="777" width="70" height="38" rx="19" fill="#F8F4E9" opacity="0.96"/>
+<text x="610" y="805" text-anchor="middle" font-size="22" font-weight="800" fill="#5FAE86">新鲜</text>
+<path d="M575,935 L640,953" fill="none" stroke="#F5B86E" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowWarning)"/>
+<rect x="575.0" y="897" width="70" height="38" rx="19" fill="#F8F4E9" opacity="0.96"/>
+<text x="610" y="925" text-anchor="middle" font-size="22" font-weight="800" fill="#F5B86E">临期</text>
+<path d="M575,965 L610,965 L610,1078 L640,1078" fill="none" stroke="#D86464" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowDanger)"/>
+<rect x="575.0" y="1027" width="70" height="38" rx="19" fill="#F8F4E9" opacity="0.96"/>
+<text x="610" y="1055" text-anchor="middle" font-size="22" font-weight="800" fill="#D86464">过期</text>
+<path d="M840,828 L900,828 L900,960 L950,960" fill="none" stroke="#5FAE86" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<path d="M840,953 L950,960" fill="none" stroke="#F5B86E" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowWarning)"/>
+<path d="M840,1078 L900,1078 L900,960 L950,960" fill="none" stroke="#D86464" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowDanger)"/>
+<path d="M1160,960 L1220,960" fill="none" stroke="#5FAE86" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<path d="M1400,930 L1445,930 L1445,828 L1480,828" fill="none" stroke="#5FAE86" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<rect x="1410.0" y="777" width="70" height="38" rx="19" fill="#F8F4E9" opacity="0.96"/>
+<text x="1445" y="805" text-anchor="middle" font-size="22" font-weight="800" fill="#5FAE86">调整</text>
+<path d="M1400,960 L1480,968" fill="none" stroke="#5FAE86" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<rect x="1405.0" y="906" width="70" height="38" rx="19" fill="#F8F4E9" opacity="0.96"/>
+<text x="1440" y="934" text-anchor="middle" font-size="22" font-weight="800" fill="#5FAE86">吃完</text>
+<path d="M1400,990 L1445,990 L1445,1108 L1480,1108" fill="none" stroke="#D86464" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowDanger)"/>
+<rect x="1410.0" y="1057" width="70" height="38" rx="19" fill="#F8F4E9" opacity="0.96"/>
+<text x="1445" y="1085" text-anchor="middle" font-size="22" font-weight="800" fill="#D86464">删除</text>
+<path d="M1700,828 L1780,828 L1780,1110 L1840,1110" fill="none" stroke="#5FAE86" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<path d="M1700,968 L1840,975" fill="none" stroke="#5FAE86" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<path d="M1700,1108 L1780,1108 L1780,975 L1840,975" fill="none" stroke="#D86464" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowDanger)"/>
+<path d="M1955,1025 L1955,1085" fill="none" stroke="#5FAE86" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<path d="M1955,1171 L1955,1260 L230,1260 L230,985" fill="none" stroke="#5FAE86" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<path d="M330,962 L760,1190 L950,1163" fill="none" stroke="#F5B86E" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowWarning)" stroke-dasharray="12 10"/>
+<rect x="615.0" y="1132" width="150" height="38" rx="19" fill="#F8F4E9" opacity="0.96"/>
+<text x="690" y="1160" text-anchor="middle" font-size="22" font-weight="800" fill="#F5B86E">网络/图片异常</text>
+<path d="M1065,1120 L1065,1060 L485,1000" fill="none" stroke="#F5B86E" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowWarning)" stroke-dasharray="12 10"/>
+<rect x="995.0" y="1054" width="90" height="38" rx="19" fill="#F8F4E9" opacity="0.96"/>
+<text x="1040" y="1082" text-anchor="middle" font-size="22" font-weight="800" fill="#F5B86E">恢复后</text>
+</svg>

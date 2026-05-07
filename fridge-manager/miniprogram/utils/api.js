@@ -18,7 +18,7 @@ function cleanData(data = {}) {
 }
 
 function getApiBaseUrls() {
-  const isDevtools = wx.getSystemInfoSync().platform === 'devtools'
+  const isDevtools = isDevtoolsPlatform()
   const urls = [
     app.globalData.API_BASE_URL,
     ...(app.globalData.API_BASE_URL_FALLBACKS || []),
@@ -39,7 +39,18 @@ function isLocalhostApiUrl(url) {
 }
 
 function isDevtoolsPlatform() {
-  return wx.getSystemInfoSync().platform === 'devtools'
+  return getRuntimePlatform() === 'devtools'
+}
+
+function getRuntimePlatform() {
+  try {
+    if (typeof wx.getDeviceInfo === 'function') {
+      return wx.getDeviceInfo().platform || ''
+    }
+  } catch (err) {
+    return ''
+  }
+  return ''
 }
 
 function isPrivateLanApiUrl(url) {
@@ -142,7 +153,7 @@ function loginWithCode(code) {
             tryLogin(index + 1)
             return
           }
-          reject({ code: 500, message: `${err.errMsg || '登录失败'}：${fullUrl}` })
+          reject({ code: 500, message: buildNetworkFailMessage(err, fullUrl, '登录失败') })
         },
       })
     }

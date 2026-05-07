@@ -26,6 +26,9 @@ class RecognitionResult(BaseModel):
     confidence: float
     category: Optional[str] = None
     reason: Optional[str] = None
+    freshness_level: Optional[str] = None
+    freshness_score: Optional[int] = None
+    freshness_description: Optional[str] = None
     shelf_life_days: Optional[int] = None
     recommended_location: Optional[str] = None
     storage_tip: Optional[str] = None
@@ -92,6 +95,9 @@ async def recognize_food_image(image: UploadFile = File(...)):
                             name=f.get('name', '未知食物'),
                             confidence=f.get('confidence', 80.0),
                             category=f.get('category', '其他'),
+                            freshness_level=f.get('freshness_level'),
+                            freshness_score=f.get('freshness_score'),
+                            freshness_description=f.get('freshness_description'),
                             shelf_life_days=f.get('shelf_life_days'),
                             recommended_location=f.get('recommended_location'),
                             storage_tip=f.get('storage_tip'),
@@ -104,6 +110,9 @@ async def recognize_food_image(image: UploadFile = File(...)):
                             name=whole_food.get('name', '熟食餐盘'),
                             confidence=whole_food.get('confidence', 80.0),
                             category=whole_food.get('category', '熟食'),
+                            freshness_level=whole_food.get('freshness_level'),
+                            freshness_score=whole_food.get('freshness_score'),
+                            freshness_description=whole_food.get('freshness_description'),
                             shelf_life_days=whole_food.get('shelf_life_days', 2),
                             recommended_location=whole_food.get('recommended_location', 'fridge'),
                             storage_tip=whole_food.get('storage_tip'),
@@ -144,6 +153,8 @@ async def infer_shelf_life(
     name: str = Form(...),
     category: str = Form(...),
     location: str = Form("fridge"),
+    freshness_level: str = Form("normal"),
+    freshness_description: str = Form(""),
 ):
     """
     推理食物保质期
@@ -151,7 +162,7 @@ async def infer_shelf_life(
     使用千问 AI 智能推理
     """
     try:
-        result = qwen_service.infer_shelf_life(name, category, location)
+        result = qwen_service.infer_shelf_life(name, category, location, freshness_level, freshness_description)
         
         return {
             "success": True,

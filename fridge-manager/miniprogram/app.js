@@ -3,7 +3,7 @@ const PRODUCTION_API_BASE_URL = 'https://api.your-domain.com/api/v1'
 const DEVTOOLS_API_BASE_URL = 'http://127.0.0.1:8000/api/v1'
 const LOCALHOST_API_BASE_URL = 'http://localhost:8000/api/v1'
 const LAN_API_BASE_URL = 'http://10.244.244.225:8000/api/v1'
-const TUNNEL_API_BASE_URL = 'https://folders-fruits-monday-yes.trycloudflare.com/api/v1'
+const TUNNEL_API_BASE_URL = 'https://qui-substance-supports-himself.trycloudflare.com/api/v1'
 
 function getMiniProgramEnv() {
   try {
@@ -23,11 +23,26 @@ function isPlaceholderProductionApi() {
   return /your-domain\.com|example\.com/.test(PRODUCTION_API_BASE_URL)
 }
 
+function getRuntimePlatform() {
+  try {
+    if (typeof wx.getDeviceInfo === 'function') {
+      return wx.getDeviceInfo().platform || ''
+    }
+  } catch (err) {
+    return ''
+  }
+  return ''
+}
+
+function isDevtoolsPlatform() {
+  return getRuntimePlatform() === 'devtools'
+}
+
 function getInitialApiBaseUrl() {
   if (isProductionLikeEnv()) {
     return PRODUCTION_API_BASE_URL
   }
-  return wx.getSystemInfoSync().platform === 'devtools'
+  return isDevtoolsPlatform()
     ? DEVTOOLS_API_BASE_URL
     : TUNNEL_API_BASE_URL
 }
@@ -36,7 +51,7 @@ function getApiBaseUrlFallbacks() {
   if (isProductionLikeEnv()) {
     return []
   }
-  return wx.getSystemInfoSync().platform === 'devtools'
+  return isDevtoolsPlatform()
     ? [LOCALHOST_API_BASE_URL, LAN_API_BASE_URL, TUNNEL_API_BASE_URL]
     : []
 }

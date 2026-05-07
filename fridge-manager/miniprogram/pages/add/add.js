@@ -9,6 +9,12 @@ const LOCATION_LABELS = {
   freezer: '冷冻',
   room: '常温',
 }
+const FRESHNESS_LABELS = {
+  fresh: '新鲜',
+  normal: '一般',
+  stale: '不太新鲜',
+  spoiled: '疑似变质',
+}
 const QUICK_FOODS = [
   { name: '鸡蛋', category: '蛋类', location: 'fridge' },
   { name: '牛奶', category: '乳制品', location: 'fridge' },
@@ -23,12 +29,41 @@ function defaultCategoryIndex(category) {
   return index >= 0 ? index : CATEGORIES.length - 1
 }
 
+function normalizeFreshnessLevel(level) {
+  const text = String(level || '').trim().toLowerCase()
+  if (text === 'fresh' || text === '新鲜' || text === '较新鲜') return 'fresh'
+  if (text === 'stale' || text === '不新鲜' || text === '欠新鲜') return 'stale'
+  if (text === 'spoiled' || text === '变质' || text === '腐坏' || text === '发霉') return 'spoiled'
+  return 'normal'
+}
+
+function getFreshnessLabel(level) {
+  return FRESHNESS_LABELS[normalizeFreshnessLevel(level)] || FRESHNESS_LABELS.normal
+}
+
+function buildFreshnessNote(item) {
+  if (!item || !item.freshness_level) {
+    return ''
+  }
+  const label = getFreshnessLabel(item.freshness_level)
+  const description = item.freshness_description || ''
+  const score = item.freshness_score ? `，${item.freshness_score}分` : ''
+  return `新鲜度：${label}${score}${description ? `（${description}）` : ''}`
+}
+
+function buildFoodNotes(item) {
+  const notes = String((item && item.notes) || '').trim()
+  const freshnessNote = buildFreshnessNote(item)
+  return [notes, freshnessNote].filter(Boolean).join('；').slice(0, 100)
+}
+
 function buildSelectedItem(result, sourceIndex, imagePath) {
   const category = result.category || '其他'
   const shelfLife = result.shelf_life_days || getDefaultShelfLife(result.name, category)
   const hasAiShelfLife = !!result.shelf_life_days
   const recommendedLocation = result.recommended_location || getDefaultLocation(result.name, category)
   const displayImagePath = result.displayImagePath || result.crop_image_url || result.image_url || imagePath || ''
+  const freshnessLevel = normalizeFreshnessLevel(result.freshness_level || result.freshness)
   return {
     sourceIndex,
     name: result.name || '',
@@ -43,6 +78,10 @@ function buildSelectedItem(result, sourceIndex, imagePath) {
     shelfProfile: result.shelfProfile || null,
     recommended_location: recommendedLocation,
     storage_tip: result.storage_tip || getDefaultStorageTip(result.name, category, recommendedLocation),
+    freshness_level: freshnessLevel,
+    freshness_score: result.freshness_score || '',
+    freshness_description: result.freshness_description || result.freshness_reason || '',
+    freshness_label: getFreshnessLabel(freshnessLevel),
     notes: '',
     imagePath: '',
     displayImagePath,
@@ -345,6 +384,8 @@ Page({
       const result = await api.recognition.recognizeImage(imagePath)
       const results = (result.success && result.data ? result.data : []).map((item, index) => ({
         ...item,
+        freshness_level: normalizeFreshnessLevel(item.freshness_level || item.freshness),
+        freshness_label: getFreshnessLabel(item.freshness_level || item.freshness),
         selected: result.mode !== 'whole',
         sourceIndex: index,
         displayImagePath: item.crop_image_url || item.image_url || imagePath,
@@ -1012,6 +1053,10 @@ Page({
     return LOCATION_LABELS[location] || '冷藏'
   },
 
+  getFreshnessLabel(level) {
+    return getFreshnessLabel(level)
+  },
+
   async fillManualShelfLife() {
     const name = this.data.formData.name.trim()
     if (!name) {
@@ -1149,7 +1194,7 @@ Page({
             image_url: imageUrl,
             location: this.data.formData.location,
             shelf_life_days: parseInt(item.shelf_life_days, 10),
-            notes: item.notes.trim(),
+            notes: buildFoodNotes(item),
           })
         }
       } else {
