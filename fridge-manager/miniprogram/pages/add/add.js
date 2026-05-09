@@ -1,6 +1,7 @@
 // pages/add/add.js
 const app = getApp()
 const api = require('../../utils/api.js')
+const imageCache = require('../../utils/imageCache.js')
 
 const CATEGORIES = ['蔬菜', '水果', '肉类', '海鲜', '蛋类', '乳制品', '豆制品', '主食', '熟食', '剩菜', '其他']
 const COOKED_KEYWORDS = ['熟食', '剩菜', '便当', '餐盘', '拼盘', '套餐', '盒饭', '饭盒', '炒菜', '炒饭', '盖饭', '剩饭', '汤']
@@ -37,12 +38,38 @@ function normalizeFreshnessLevel(level) {
   return 'normal'
 }
 
+function containsUnnegatedKeyword(text, keywords) {
+  const source = String(text || '')
+  if (!source) {
+    return false
+  }
+
+  const negationMarkers = ['无', '没有', '未见', '未发现', '未观察到', '未闻到', '并无', '无明显', '没有明显', '未出现']
+  const clauses = source.split(/[，。；;,.、\n]+/)
+  for (const clause of clauses) {
+    if (!clause) {
+      continue
+    }
+    for (const keyword of keywords) {
+      let index = clause.indexOf(keyword)
+      while (index >= 0) {
+        const prefix = clause.slice(Math.max(0, index - 8), index)
+        if (!negationMarkers.some(marker => prefix.indexOf(marker) >= 0)) {
+          return true
+        }
+        index = clause.indexOf(keyword, index + keyword.length)
+      }
+    }
+  }
+  return false
+}
+
 function normalizeFreshnessInfo(item) {
   const description = String((item && (item.freshness_description || item.freshness_reason || item.storage_tip)) || '')
   const score = Number(item && item.freshness_score)
   const severeKeywords = ['黑洞', '烂洞', '腐烂', '腐坏', '烂了', '发霉', '霉斑', '霉点', '软烂', '渗汁', '流汁', '大面积黑斑', '明显黑斑', '发黑凹陷']
   let level = normalizeFreshnessLevel(item && (item.freshness_level || item.freshness))
-  const hasSevereSignal = severeKeywords.some(keyword => description.indexOf(keyword) >= 0)
+  const hasSevereSignal = containsUnnegatedKeyword(description, severeKeywords)
   if (hasSevereSignal || (score && score < 20)) {
     level = 'spoiled'
   } else if (score >= 60) {
@@ -85,12 +112,16 @@ function buildFoodNotes(item) {
   return [notes, freshnessNote].filter(Boolean).join('；').slice(0, 100)
 }
 
+function getSafeDisplayImagePath(primaryPath, fallbackPath) {
+  return imageCache.getDisplayImageUrl(primaryPath) || imageCache.getDisplayImageUrl(fallbackPath) || ''
+}
+
 function buildSelectedItem(result, sourceIndex, imagePath) {
   const category = result.category || '其他'
   const shelfLife = result.shelf_life_days || getDefaultShelfLife(result.name, category)
   const hasAiShelfLife = !!result.shelf_life_days
   const recommendedLocation = result.recommended_location || getDefaultLocation(result.name, category)
-  const displayImagePath = result.displayImagePath || result.crop_image_url || result.image_url || imagePath || ''
+  const displayImagePath = getSafeDisplayImagePath(result.displayImagePath || result.crop_image_url || result.image_url, imagePath)
   const freshnessInfo = normalizeFreshnessInfo(result)
   const isSpoiled = freshnessInfo.level === 'spoiled'
   const item = {
@@ -99,6 +130,7 @@ function buildSelectedItem(result, sourceIndex, imagePath) {
     category,
     categoryIndex: defaultCategoryIndex(category),
     confidence: result.confidence || 80,
+    location: isSpoiled ? 'fridge' : recommendedLocation,
     shelf_life_days: isSpoiled ? '1' : (shelfLife ? String(shelfLife) : ''),
     shelf_life_manual: false,
     shelf_life_source: hasAiShelfLife ? 'ai' : 'fallback',
@@ -130,8 +162,9 @@ function buildShelfExplain(item, location) {
   const name = item.name || '该食材'
   const category = item.category || '食材'
   const currentLocation = location || item.location || item.recommended_location || item.ai_recommended_location || 'fridge'
+  const storedLocation = item.location || item.recommended_location || item.ai_recommended_location || 'fridge'
   const locationText = LOCATION_LABELS[currentLocation] || '冷藏'
-  const days = item.shelf_life_days || getItemShelfLifeForLocation(item, currentLocation) || ''
+  const days = getItemShelfLifeForLocation(item, currentLocation) || (currentLocation === storedLocation ? item.shelf_life_days : '') || ''
   const sourceText = item.shelf_life_manual
     ? '你手动调整后'
     : item.shelf_life_source === 'ai'
@@ -248,17 +281,35 @@ function getShelfLifeByLocation(profile, location) {
 }
 
 function getItemShelfLifeForLocation(item, location) {
+  const targetLocation = location || (item && (item.location || item.recommended_location || item.ai_recommended_location)) || 'fridge'
+  const currentLocation = item && (item.location || item.recommended_location || item.ai_recommended_location)
+
   if (item && item.shelf_life_manual && item.shelf_life_days) {
     return item.shelf_life_days
   }
   if (item && item.shelf_life_source === 'ai') {
     const aiLocation = item.ai_recommended_location || item.recommended_location
-    if (location === aiLocation && (item.ai_shelf_life_days || item.shelf_life_days)) {
+    if (targetLocation === aiLocation && (item.ai_shelf_life_days || item.shelf_life_days)) {
       return item.ai_shelf_life_days || item.shelf_life_days
     }
-    return getShelfLifeByLocation(item.shelfProfile, location) || getDefaultShelfLifeForLocation(item.name, item.category, location) || ''
+    return getShelfLifeByLocation(item.shelfProfile, targetLocation) || getDefaultShelfLifeForLocation(item.name, item.category, targetLocation) || ''
   }
-  return getShelfLifeByLocation(item && item.shelfProfile, location) || getDefaultShelfLifeForLocation(item && item.name, item && item.category, location) || (item && item.shelf_life_days) || ''
+
+  const profileDays = getShelfLifeByLocation(item && item.shelfProfile, targetLocation)
+  if (profileDays) {
+    return profileDays
+  }
+
+  const defaultDays = getDefaultShelfLifeForLocation(item && item.name, item && item.category, targetLocation)
+  if (defaultDays) {
+    return defaultDays
+  }
+
+  if (!location || targetLocation === currentLocation) {
+    return (item && item.shelf_life_days) || ''
+  }
+
+  return ''
 }
 
 function buildLocationDays(item) {
@@ -294,11 +345,16 @@ function applyLocationShelfLifeToItems(items, location) {
     if (item.shelf_life_manual) {
       return {
         ...item,
+        location: location || item.location || item.recommended_location,
         explain_text: buildShelfExplain(item, location || item.location || item.recommended_location),
       }
     }
     const shelfLife = getItemShelfLifeForLocation(item, location)
-    const nextItem = shelfLife ? { ...item, shelf_life_days: String(shelfLife) } : item
+    const nextItem = {
+      ...item,
+      location: location || item.location || item.recommended_location,
+      shelf_life_days: shelfLife ? String(shelfLife) : '',
+    }
     return {
       ...nextItem,
       explain_text: buildShelfExplain(nextItem, location || nextItem.location || nextItem.recommended_location),
@@ -413,14 +469,82 @@ Page({
     })
   },
 
+  getLocalFileSize(filePath) {
+    return new Promise((resolve) => {
+      if (!filePath || typeof wx.getFileSystemManager !== 'function') {
+        resolve(0)
+        return
+      }
+
+      try {
+        wx.getFileSystemManager().getFileInfo({
+          filePath,
+          success: (res) => {
+            resolve(Number(res.size) || 0)
+          },
+          fail: () => resolve(0),
+        })
+      } catch (err) {
+        resolve(0)
+      }
+    })
+  },
+
+  compressRecognitionImage(imagePath, quality = 72) {
+    return new Promise((resolve) => {
+      if (!imagePath || typeof wx.compressImage !== 'function') {
+        resolve(imagePath)
+        return
+      }
+
+      wx.compressImage({
+        src: imagePath,
+        quality,
+        success: (res) => {
+          resolve(res.tempFilePath || imagePath)
+        },
+        fail: () => resolve(imagePath),
+      })
+    })
+  },
+
+  async prepareRecognitionImage(imagePath) {
+    if (!imagePath) {
+      return imagePath
+    }
+
+    const originalSize = await this.getLocalFileSize(imagePath)
+    const shouldCompress = !originalSize || originalSize > 600 * 1024
+    if (!shouldCompress) {
+      return imagePath
+    }
+
+    const compressedPath = await this.compressRecognitionImage(imagePath)
+    if (!compressedPath || compressedPath === imagePath) {
+      return imagePath
+    }
+
+    const compressedSize = await this.getLocalFileSize(compressedPath)
+    if (compressedSize && originalSize && compressedSize >= originalSize) {
+      return imagePath
+    }
+
+    console.log('识图前压缩图片:', {
+      originalSize,
+      compressedSize,
+    })
+    return compressedPath
+  },
+
   async chooseImage() {
     if (this.data.recognizing || this.data.submitting) {
       return
     }
 
-    const handleImagePath = (imagePath) => {
+    const handleImagePath = async (imagePath) => {
       if (imagePath) {
-        this.recognizeSelectedImage(imagePath)
+        const preparedImagePath = await this.prepareRecognitionImage(imagePath)
+        this.recognizeSelectedImage(preparedImagePath || imagePath)
       }
     }
     const handleChooseFail = (err) => {
@@ -506,7 +630,7 @@ Page({
           freshness_label: getFreshnessLabel(freshnessInfo.level),
           selected: result.mode !== 'whole',
           sourceIndex: index,
-          displayImagePath: item.crop_image_url || item.image_url || imagePath,
+          displayImagePath: getSafeDisplayImagePath(item.crop_image_url || item.image_url, imagePath),
         }
       })
       const wholeItem = result.whole_food ? buildSelectedItem(result.whole_food, -1, imagePath) : null
@@ -692,7 +816,7 @@ Page({
     const profile = item.shelfProfile || (source === 'manual' ? this.data.manualShelfProfile : null) || {}
     const location = source === 'manual'
       ? this.data.formData.location
-      : (item.recommended_location || this.data.formData.location || 'fridge')
+      : (item.location || item.recommended_location || this.data.formData.location || 'fridge')
     const shelfLife = source === 'manual'
       ? getShelfLifeByLocation(profile, location) || item.shelf_life_days || this.data.formData.shelf_life_days
       : getItemShelfLifeForLocation({ ...item, shelfProfile: profile }, location) || this.data.formData.shelf_life_days
@@ -809,6 +933,7 @@ Page({
       const selectedItems = this.data.selectedItems.slice()
       selectedItems[this.data.decisionIndex] = {
         ...selectedItems[this.data.decisionIndex],
+        location: item.location,
         shelf_life_days: item.shelf_life_days,
         recommended_location: item.recommended_location,
         storage_tip: item.storage_tip,

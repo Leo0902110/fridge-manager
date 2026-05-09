@@ -16,16 +16,22 @@ function isLocalTempUrl(url) {
 }
 
 function getDisplayImageUrl(url) {
-  if (!url || isUnsafeHttpUrl(url)) {
+  if (!url) {
     return ''
+  }
+  if (isLocalTempUrl(url)) {
+    return url
   }
   if (getUploadPath(url)) {
     const candidates = buildCandidates(url)
-    if (isDevelopmentLikeEnv() && (candidates.some(isLocalDevelopmentUrl) || candidates.some(isTryCloudflareUrl))) {
-      return ''
+    if (isDevelopmentLikeEnv() && candidates.some(isLocalDevelopmentUrl)) {
+      return imageCache[url] || ''
     }
-    const safeRemote = candidates.find(candidate => candidate && !isUnsafeHttpUrl(candidate) && !isTryCloudflareUrl(candidate))
+    const safeRemote = candidates.find(candidate => candidate && !isUnsafeHttpUrl(candidate))
     return safeRemote || ''
+  }
+  if (isUnsafeHttpUrl(url)) {
+    return ''
   }
   return url
 }
@@ -45,7 +51,9 @@ function getOrigin(url) {
 
 function isDevtoolsPlatform() {
   try {
-    const platform = wx.getSystemInfoSync().platform
+    const platform = typeof wx.getDeviceInfo === 'function'
+      ? wx.getDeviceInfo().platform
+      : wx.getSystemInfoSync().platform
     return platform === 'devtools' || platform === 'mac' || platform === 'windows'
   } catch (err) {
     return false
@@ -151,12 +159,19 @@ async function resolveImageUrl(url) {
           return localPath
         }
       }
-      if (candidates.some(isTryCloudflareUrl)) {
-        return ''
+
+      const remoteCandidates = candidates.filter(candidate => candidate && !isUnsafeHttpUrl(candidate))
+      for (let i = 0; i < remoteCandidates.length; i += 1) {
+        const remotePath = await downloadImage(remoteCandidates[i])
+        if (remotePath) {
+          imageCache[url] = remotePath
+          return remotePath
+        }
       }
+      return ''
     }
 
-    const safeRemote = candidates.find(candidate => candidate && !isUnsafeHttpUrl(candidate) && !isTryCloudflareUrl(candidate))
+    const safeRemote = candidates.find(candidate => candidate && !isUnsafeHttpUrl(candidate))
     if (safeRemote) {
       imageCache[url] = safeRemote
       return safeRemote

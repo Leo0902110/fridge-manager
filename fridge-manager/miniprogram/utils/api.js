@@ -3,7 +3,7 @@
 const app = getApp()
 const DEFAULT_TIMEOUT = 20000
 const UPLOAD_TIMEOUT = 20000
-const RECOGNITION_TIMEOUT = 60000
+const RECOGNITION_TIMEOUT = 90000
 const AUTH_TOKEN_KEY = 'FRIDGE_AUTH_TOKEN'
 
 function cleanData(data = {}) {

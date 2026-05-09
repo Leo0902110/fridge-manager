@@ -8,6 +8,7 @@ import logging
 import os
 import copy
 import hashlib
+import re
 from http import HTTPStatus
 from pathlib import Path
 from typing import Any, Dict, Optional, cast
@@ -16,12 +17,8 @@ from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
-try:
-    import dashscope
-    from dashscope import MultiModalConversation
-except ImportError:
-    dashscope = None
-    MultiModalConversation = None
+dashscope: Any = None
+MultiModalConversation: Any = None
 
 logger = logging.getLogger(__name__)
 
@@ -48,12 +45,6 @@ class QwenService:
         self.recipe_model = os.getenv("QWEN_RECIPE_MODEL", self.text_model)
         self.vl_model = os.getenv("QWEN_VL_MODEL", "qwen-vl-max")
 
-        if dashscope is None:
-            if not self._warned_missing_sdk:
-                logger.warning("未安装 dashscope，千问 AI 功能不可用")
-                self._warned_missing_sdk = True
-            return
-
         if not self.api_key:
             if not self._warned_missing_key:
                 logger.warning("未配置 DASHSCOPE_API_KEY，千问 AI 功能不可用")
@@ -61,15 +52,60 @@ class QwenService:
             return
 
         self._warned_missing_key = False
+
+    def _ensure_dashscope_loaded(self) -> bool:
+        """按需加载 dashscope，避免服务启动时被 SDK 导入阻塞。"""
+        global dashscope, MultiModalConversation
+        if dashscope is not None and MultiModalConversation is not None:
+            dashscope.api_key = self.api_key
+            return True
+        try:
+            import dashscope as dashscope_module
+            from dashscope import MultiModalConversation as conversation_module
+        except ImportError:
+            if not self._warned_missing_sdk:
+                logger.warning("未安装 dashscope，千问 AI 功能不可用")
+                self._warned_missing_sdk = True
+            return False
+        dashscope = dashscope_module
+        MultiModalConversation = conversation_module
         dashscope.api_key = self.api_key
+        self._warned_missing_sdk = False
+        return True
 
     def _is_available(self) -> bool:
         self._refresh_config()
-        return dashscope is not None and bool(self.api_key)
+        return bool(self.api_key) and self._ensure_dashscope_loaded()
 
     @staticmethod
     def _contains_any(text: str, keywords: list[str]) -> bool:
         return any(keyword in text for keyword in keywords)
+
+    @staticmethod
+    def _contains_unnegated_keyword(text: str, keywords: list[str]) -> bool:
+        if not text:
+            return False
+
+        negation_markers = (
+            "无", "没有", "未见", "未发现", "未观察到", "未闻到",
+            "并无", "无明显", "没有明显", "未出现",
+        )
+        clauses = re.split(r"[，。；;,.、\n]+", text)
+        for clause in clauses:
+            clause = clause.strip()
+            if not clause:
+                continue
+            for keyword in keywords:
+                start = 0
+                while True:
+                    index = clause.find(keyword, start)
+                    if index < 0:
+                        break
+                    prefix = clause[max(0, index - 8):index]
+                    if not any(marker in prefix for marker in negation_markers):
+                        return True
+                    start = index + len(keyword)
+        return False
 
     @staticmethod
     def _normalize_freshness_level(value: object) -> str:
@@ -100,13 +136,13 @@ class QwenService:
 
     def _infer_freshness_from_text(self, food: dict) -> str:
         text = "".join(str(food.get(key) or "") for key in ("freshness_description", "freshness_reason", "freshness_evidence"))
-        if self._contains_any(text, [
+        if self._contains_unnegated_keyword(text, [
             "发霉", "霉斑", "霉点", "腐烂", "腐坏", "烂了", "烂洞", "黑洞",
             "异味", "黏液", "流汁", "汁水渗出", "黑斑严重", "大面积黑斑",
             "明显黑斑", "深色凹陷", "发黑凹陷", "软烂", "腐烂洞",
         ]):
             return "spoiled"
-        if self._contains_any(text, ["不新鲜", "欠新鲜", "萎蔫", "发蔫", "变软", "发皱", "干瘪", "褐变", "黑斑", "碰伤", "熟透", "边缘干"]):
+        if self._contains_unnegated_keyword(text, ["不新鲜", "欠新鲜", "萎蔫", "发蔫", "变软", "发皱", "干瘪", "褐变", "黑斑", "碰伤", "熟透", "边缘干"]):
             return "stale"
         if self._contains_any(text, ["较新鲜", "新鲜", "色泽好", "饱满"]):
             return "fresh"
@@ -310,7 +346,7 @@ class QwenService:
    - 明显萎蔫、明显发皱、较多褐变/黑斑、明显软塌但没有腐烂霉斑：扣 40-60 分。
    - 黑洞、烂洞、霉斑、腐烂、软烂渗汁、异味迹象、包装胀气/漏液：扣 80-100 分。
 7. freshness_score 与 freshness_level 必须严格对应：0-19 spoiled，20-39 stale，40-59 normal，60-100 fresh。普通成熟香蕉、完整水果、正常切开的水果通常应为 fresh；不要把切面反光、红色果肉、香蕉正常黄色果皮当作变质。
-8. freshness_description 必须写清楚可见证据，例如“外观完整”“正常切面”“轻微褐变”“有烂洞”。如果没有看到黑洞、烂洞、霉斑、渗汁，不要写“疑似变质”。
+8. freshness_description 必须写清楚可见证据，例如“外观完整”“正常切面”“轻微褐变”“有烂洞”。如果没有看到黑洞、烂洞、霉斑、渗汁，不要写“疑似变质”。优先用正向描述，如“外观完整”“汤色正常”“表面干爽”，不要写“无霉斑”“无渗汁”“无异味”这类否定式短语。
 9. 先估标准保质期，再按新鲜度折减：fresh 可接近标准；normal 略保守；stale 大幅缩短，水果/蔬菜/主食通常 1-2 天，高风险肉类/海鲜/乳制品/熟食通常 1 天；spoiled 返回 1 天并在 storage_tip 写“不建议入库/建议丢弃”。
 10. 如果图片里食物看起来已经切开、开封、熟制、混合、汁水多或不够新鲜，要保守缩短天数。不要为了“耐放”给离谱长天数。
 
