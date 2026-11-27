@@ -20,21 +20,25 @@ fridge-manager/
 │   │   ├── add/          # 添加食物（拍照）
 │   │   ├── detail/       # 食物详情
 │   │   └── settings/     # 设置
-│   ├── components/
-│   │   └── food-card/    # 食物卡片组件
+│   ├── custom-tab-bar/   # 自定义底部导航栏
+│   ├── images/           # 图标与静态资源
 │   ├── utils/
-│   │   └── api.js        # API 调用封装
+│   │   ├── api.js        # API 调用封装
+│   │   └── imageCache.js # 本地图片缓存
 │   ├── app.js
 │   ├── app.json
 │   └── app.wxss
 ├── backend/              # 后端 API
 │   ├── app/
-│   │   ├── services/     # legacy 业务逻辑（Qwen）
-│   │   └── db/           # legacy SQLite 初始化
+│   │   ├── services/     # Qwen AI 识别与保质期推理服务
+│   │   └── db/           # SQLite 数据库封装
 │   ├── django_api/       # Django API 视图与路由
 │   ├── fridge_service/   # Django settings/asgi/wsgi
 │   ├── main.py           # Django ASGI 启动入口
+│   ├── manage.py
 │   └── requirements.txt
+├── Dockerfile            # 容器化部署配置
+├── DEPLOYMENT.md         # 通用部署说明
 └── README.md
 ```
 
@@ -54,6 +58,13 @@ python main.py
 ```
 
 当前 `main.py` 启动的是 Django ASGI 服务，默认监听 `http://127.0.0.1:8000`。
+
+### Docker 部署
+项目根目录已提供 [Dockerfile](./Dockerfile)，可直接构建并运行后端服务：
+```bash
+docker build -t fridge-manager-backend .
+docker run -d -p 8000:8000 --env-file backend/.env fridge-manager-backend
+```
 
 ## 🔑 API 配置
 
