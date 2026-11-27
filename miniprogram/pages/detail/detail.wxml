@@ -1,0 +1,121 @@
+<!--pages/detail/detail.wxml - 食物详情页-->
+<!-- 核心风格优化点：详情摘要卡模拟单个保鲜盒，状态标签和进度条突出保质期信息层级。 -->
+<view class="container" wx:if="{{loading}}">
+  <view class="detail-skeleton-title skeleton-line skeleton-line-large mb-16"></view>
+  <view class="detail-skeleton-subtitle skeleton-line skeleton-line-medium mb-32"></view>
+
+  <view class="card summary-card skeleton-card mb-32">
+    <view class="summary-top">
+      <view class="summary-icon skeleton-avatar"></view>
+      <view class="summary-main">
+        <view class="skeleton-line skeleton-line-medium mb-8"></view>
+        <view class="skeleton-line skeleton-line-small"></view>
+      </view>
+    </view>
+    <view class="summary-bottom">
+      <view class="skeleton-line skeleton-line-small mb-8"></view>
+      <view class="skeleton-line skeleton-line-medium"></view>
+    </view>
+  </view>
+
+  <view class="list-group">
+    <view class="list-cell" wx:for="{{[1,2,3]}}" wx:key="*this">
+      <view class="list-main">
+        <view class="skeleton-line skeleton-line-medium mb-8"></view>
+        <view class="skeleton-line skeleton-line-small"></view>
+      </view>
+    </view>
+  </view>
+</view>
+
+<view class="container" wx:elif="{{food}}">
+  <text class="large-title">{{food.name}}</text>
+  <view class="page-summary-row">
+    <text class="page-subtitle page-subtitle-inline">{{food.category}} · {{getLocationText(food.location)}}</text>
+    <text class="refresh-state {{actingType ? 'loading' : ''}}" wx:if="{{actingType}}">{{actingType === 'delete' ? '删除中' : '处理中'}}</text>
+  </view>
+
+  <view class="card summary-card">
+    <image class="detail-food-image" wx:if="{{food.display_image_url}}" src="{{food.display_image_url}}" mode="aspectFill" binderror="onFoodImageError" data-url="{{food.image_url}}" />
+    <view class="summary-top">
+      <view class="summary-icon">
+        <text>{{getCategoryIcon(food.category)}}</text>
+      </view>
+      <view class="summary-main">
+        <text class="summary-name">{{food.name}}</text>
+        <text class="summary-meta">{{food.category}}</text>
+      </view>
+      <view class="status-tag status-{{daysResult.type}}">{{daysResult.text}}</view>
+    </view>
+
+    <view class="summary-bottom">
+      <text class="summary-label">到期</text>
+      <text class="summary-date">{{food.expiry_date}}</text>
+      <view class="detail-freshness detail-{{daysResult.type}}">
+        <view class="detail-freshness-fill"></view>
+      </view>
+    </view>
+  </view>
+
+  <view class="card location-recalc-card">
+    <view class="section-header location-recalc-header">
+      <text class="section-title">保存方式</text>
+    </view>
+    <view class="location-options">
+      <view class="location-option {{food.location === 'fridge' ? 'active' : ''}}" bindtap="changeLocation" data-location="fridge">
+        <text class="location-option-title">🧊 冷藏</text>
+        <text class="location-option-days">{{getLocationDays('fridge')}}天</text>
+      </view>
+      <view class="location-option {{food.location === 'freezer' ? 'active' : ''}}" bindtap="changeLocation" data-location="freezer">
+        <text class="location-option-title">❄️ 冷冻</text>
+        <text class="location-option-days">{{getLocationDays('freezer')}}天</text>
+      </view>
+      <view class="location-option {{food.location === 'room' ? 'active' : ''}}" bindtap="changeLocation" data-location="room">
+        <text class="location-option-title">🌡️ 常温</text>
+        <text class="location-option-days">{{getLocationDays('room')}}天</text>
+      </view>
+    </view>
+    <text class="location-tip" wx:if="{{storageTip}}">{{storageTip}}</text>
+    <view class="shelf-explain-card" wx:if="{{shelfExplainText}}">
+      <text class="shelf-explain-label">为什么这样推荐</text>
+      <text class="shelf-explain-text">{{shelfExplainText}}</text>
+    </view>
+  </view>
+
+  <view class="list-group">
+    <view class="list-cell">
+      <view class="list-main">
+        <text class="list-title">位置</text>
+      </view>
+      <text class="row-value">{{getLocationText(food.location)}}</text>
+    </view>
+    <view class="list-cell">
+      <view class="list-main">
+        <text class="list-title">放入日期</text>
+      </view>
+      <text class="row-value">{{food.put_date}}</text>
+    </view>
+    <view class="list-cell">
+      <view class="list-main">
+        <text class="list-title">保质期</text>
+      </view>
+      <text class="row-value">{{food.shelf_life_days}} 天</text>
+    </view>
+  </view>
+
+  <view class="section-header detail-section-header" wx:if="{{food.notes}}">
+    <text class="section-title">备注</text>
+  </view>
+  <view class="card notes-card" wx:if="{{food.notes}}">
+    <text class="notes-text">{{food.notes}}</text>
+  </view>
+
+  <button class="btn btn-danger detail-delete-btn" bindtap="deleteFood" disabled="{{!!actingType}}">{{actingType === 'delete' ? '删除中...' : '删除'}}</button>
+
+  <button class="btn btn-success" bindtap="markAsEaten" disabled="{{!!actingType}}">{{actingType === 'eat' ? '处理中...' : '吃完'}}</button>
+</view>
+<view class="container" wx:else>
+  <view class="loading card">
+    <text class="loading-text">加载中...</text>
+  </view>
+</view>

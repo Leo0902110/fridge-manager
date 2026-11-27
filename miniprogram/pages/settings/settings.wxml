@@ -1,0 +1,78 @@
+<!--pages/settings/settings.wxml - 设置页面-->
+<!-- 核心风格优化点：个人卡、统计卡、设置列表使用统一保鲜盒卡片与柔和功能色。 -->
+<view class="container tab-page">
+  <text class="large-title">设置</text>
+
+  <view class="card profile-card">
+    <view class="profile-avatar">冰</view>
+    <view class="profile-main">
+      <text class="profile-name">冰箱管家</text>
+    </view>
+  </view>
+
+  <view class="card stats-card">
+    <view class="section-header stats-header">
+      <text class="section-title">使用统计</text>
+    </view>
+    <view class="stats-grid">
+      <view class="stat-item">
+        <text class="stat-value">{{stats.totalFoods}}</text>
+        <text class="stat-label">总记录</text>
+      </view>
+      <view class="stat-item">
+        <text class="stat-value">{{stats.eatenCount}}</text>
+        <text class="stat-label">已吃完</text>
+      </view>
+      <view class="stat-item">
+        <text class="stat-value">{{stats.wasteCount}}</text>
+        <text class="stat-label">已过期</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="section-header settings-section-header">
+    <text class="section-title">通用</text>
+  </view>
+  <view class="list-group">
+    <view class="list-cell settings-cell" bindtap="showAbout">
+      <view class="item-leading blue">i</view>
+      <view class="list-main">
+        <text class="list-title">关于</text>
+      </view>
+      <text class="chevron">›</text>
+    </view>
+    <view class="list-cell settings-cell" bindtap="checkUpdate">
+      <view class="item-leading green">↻</view>
+      <view class="list-main">
+        <text class="list-title">检查更新</text>
+      </view>
+      <text class="chevron">›</text>
+    </view>
+  </view>
+
+  <view class="section-header settings-section-header">
+    <text class="section-title">支持</text>
+  </view>
+  <view class="list-group">
+    <view class="list-cell settings-cell" bindtap="feedback">
+      <view class="item-leading orange">✉</view>
+      <view class="list-main">
+        <text class="list-title">意见反馈</text>
+      </view>
+      <text class="chevron">›</text>
+    </view>
+    <view class="list-cell settings-cell" bindtap="contactUs">
+      <view class="item-leading gray">@</view>
+      <view class="list-main">
+        <text class="list-title">联系我们</text>
+        <text class="list-subtitle">981391948@qq.com</text>
+      </view>
+      <text class="chevron">›</text>
+    </view>
+  </view>
+
+  <view class="version-footer">
+    <text class="version-text">Version 1.0.0</text>
+    <text class="version-text">Fridge Manager</text>
+  </view>
+</view>

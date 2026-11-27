@@ -1,0 +1,26 @@
+# Fridge Manager Backend Dependencies
+
+# Core Framework
+uvicorn[standard]>=0.24.0
+django>=5.2.0
+djangorestframework>=3.15.0
+django-cors-headers>=4.4.0
+gunicorn>=23.0.0
+
+# Database
+aiosqlite>=0.19.0
+
+# HTTP Client (for AI APIs)
+httpx>=0.25.0
+
+# Image Processing
+pillow>=10.0.0
+
+# Utilities
+python-dotenv>=1.0.0
+
+# 通义千问 API
+dashscope>=1.14.0
+
+# Date/Time
+python-dateutil>=2.8.0

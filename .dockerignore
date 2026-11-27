@@ -1,0 +1,10 @@
+.DS_Store
+.venv
+backend/.env
+backend/fridge.db
+backend/uploads
+backend/__pycache__
+backend/**/__pycache__
+backend/**/*.pyc
+project.private.config.json
+miniprogram/project.private.config.json

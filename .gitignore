@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+.DS_Store
+
+.venv/
+backend/.venv/
+.env
+backend/.env
+backend/fridge.db
+backend/uploads/
+project.private.config.json

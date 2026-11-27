@@ -1,0 +1,440 @@
+<!--pages/add/add.wxml - 添加食物页面-->
+<!-- 核心风格优化点：拍照区、识别结果、清单、表单与底部操作区统一为圆角柔边和保鲜盒质感。 -->
+<view class="container tab-page add-page">
+  <text class="large-title">添加</text>
+  <view class="page-summary-row">
+    <text class="refresh-state {{recognizing || submitting ? 'loading' : ''}}">{{recognizing ? '识别中' : submitting ? '保存中' : '待输入'}}</text>
+  </view>
+
+  <view class="card capture-card">
+    <view class="section-header capture-header">
+      <text class="section-title">拍照</text>
+      <button
+        class="reset-add-btn"
+        wx:if="{{imagePath}}"
+        bindtap="resetAddPage"
+        disabled="{{recognizing || submitting}}"
+      >重新添加</button>
+    </view>
+
+    <view class="camera-panel" bindtap="chooseImage" wx:if="{{!imagePath}}">
+      <text class="camera-icon">📷</text>
+      <text class="camera-title">拍照 / 相册</text>
+      <text class="camera-subtitle">轻触记录食材，AI 帮你整理冰箱</text>
+    </view>
+
+    <view class="image-preview" wx:else>
+      <image
+        class="preview-image"
+        src="{{imagePath}}"
+        mode="aspectFill"
+        bindtap="chooseImage"
+      />
+      <view class="processing-banner" wx:if="{{recognizing}}">
+        <text class="processing-title">识别中</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="card empty-recognition-card" wx:if="{{imagePath && !recognizing && recognitionResults.length === 0 && !wholeItem}}">
+    <view class="empty-recognition-icon">?</view>
+    <text class="empty-recognition-title">{{recognitionError ? '识别失败' : '未识别'}}</text>
+    <view class="empty-recognition-actions">
+      <button class="mini-btn" bindtap="retryRecognition" disabled="{{recognizing || submitting}}">重新识别</button>
+    </view>
+  </view>
+
+  <view class="card entry-mode-card" wx:if="{{wholeItem && recognitionResults.length > 0}}">
+    <view class="section-header result-header">
+      <text class="section-title">入库方式</text>
+    </view>
+    <view class="entry-mode-switch">
+      <view
+        class="entry-mode-option {{entryMode === 'whole' ? 'active' : ''}}"
+        bindtap="switchEntryMode"
+        data-mode="whole"
+      >
+        <text class="entry-mode-title">整份熟食</text>
+      </view>
+      <view
+        class="entry-mode-option {{entryMode === 'split' ? 'active' : ''}}"
+        bindtap="switchEntryMode"
+        data-mode="split"
+      >
+        <text class="entry-mode-title">拆分食材</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{recognitionResults.length > 0 && entryMode === 'split'}}">
+    <view class="section-header result-header">
+      <text class="section-title">识别结果</text>
+      <text class="section-hint">已选 {{selectedCount}} 项</text>
+    </view>
+
+    <scroll-view class="result-scroll" scroll-y>
+      <view
+        class="result-cell {{item.selected ? 'active' : ''}}"
+        wx:for="{{recognitionResults}}"
+        wx:key="name"
+        bindtap="toggleResult"
+        data-index="{{index}}"
+      >
+        <view class="result-check">{{item.selected ? '✓' : ''}}</view>
+        <view class="result-thumb">
+          <image
+            wx:if="{{item.displayImagePath}}"
+            class="result-thumb-image"
+            src="{{item.displayImagePath}}"
+            mode="aspectFill"
+            binderror="onRecognitionImageError"
+            data-index="{{index}}"
+          />
+          <text wx:else class="result-icon">{{getCategoryIcon(item.category)}}</text>
+        </view>
+        <view class="list-main">
+          <text class="list-title">{{item.name}}</text>
+          <text class="list-subtitle">{{item.confidence}}% 匹配 · {{item.category}}</text>
+          <view class="freshness-row" wx:if="{{item.freshness_level}}">
+            <text class="freshness-chip freshness-{{item.freshness_level}}">{{item.freshness_label || getFreshnessLabel(item.freshness_level)}}{{item.freshness_score ? ' · ' + item.freshness_score + '分' : ''}}</text>
+          </view>
+        </view>
+        <text class="result-state">{{item.selected ? '已选' : '选择'}}</text>
+      </view>
+    </scroll-view>
+  </view>
+
+  <view class="card selected-editor-card" wx:if="{{selectedItems.length > 0}}">
+    <view class="section-header form-header">
+      <text class="section-title">清单</text>
+    </view>
+
+    <scroll-view class="selected-scroll" scroll-y>
+      <view
+        class="selected-item"
+        wx:for="{{selectedItems}}"
+        wx:key="sourceIndex"
+        bindtap="openItemEditor"
+        data-index="{{index}}"
+      >
+        <view class="selected-thumb">
+          <image wx:if="{{item.displayImagePath}}" class="selected-thumb-image" src="{{item.displayImagePath}}" mode="aspectFill" binderror="onSelectedImageError" data-index="{{index}}" />
+          <image wx:elif="{{item.imagePath}}" class="selected-thumb-image" src="{{item.imagePath}}" mode="aspectFill" binderror="onSelectedImageError" data-index="{{index}}" />
+          <image wx:elif="{{imagePath}}" class="selected-thumb-image muted" src="{{imagePath}}" mode="aspectFill" />
+          <text wx:else class="selected-thumb-icon">{{getCategoryIcon(item.category)}}</text>
+        </view>
+        <view class="selected-main">
+          <view class="selected-title-row">
+            <text class="selected-badge">{{index + 1}}</text>
+            <text class="selected-title">{{item.name || '待命名'}}</text>
+          </view>
+          <view class="selected-summary">
+            <text class="selected-meta">{{item.category}}</text>
+            <text class="selected-dot">·</text>
+            <text class="selected-meta">{{item.shelf_life_days || '--'}} 天</text>
+            <block wx:if="{{item.recommended_location}}">
+              <text class="selected-dot">·</text>
+              <text class="selected-meta">{{getLocationText(item.recommended_location)}}</text>
+            </block>
+            <block wx:if="{{item.freshness_level}}">
+              <text class="selected-dot">·</text>
+              <text class="selected-meta freshness-text">{{item.freshness_label || getFreshnessLabel(item.freshness_level)}}</text>
+            </block>
+          </view>
+          <view class="explain-chip" wx:if="{{item.explain_text}}">
+            <text class="explain-chip-label">推荐依据</text>
+            <text class="explain-chip-text">{{item.explain_text}}</text>
+          </view>
+        </view>
+        <view class="selected-actions">
+          <view class="selected-delete-btn" catchtap="removeSelectedItem" data-index="{{index}}">×</view>
+        </view>
+      </view>
+    </scroll-view>
+  </view>
+
+  <view class="card quick-add-card" wx:if="{{selectedItems.length === 0 && !imagePath}}">
+    <view class="section-header quick-add-header">
+      <text class="section-title">常用</text>
+    </view>
+    <view class="quick-food-grid">
+      <view
+        class="quick-food-chip"
+        wx:for="{{quickFoods}}"
+        wx:key="name"
+        bindtap="fillQuickFood"
+        data-index="{{index}}"
+      >
+        <text class="quick-food-icon">{{getCategoryIcon(item.category)}}</text>
+        <text class="quick-food-name">{{item.name}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="section-header form-header">
+      <text class="section-title">{{selectedItems.length > 0 ? '设置' : '信息'}}</text>
+    </view>
+
+    <view class="field-group">
+      <view class="field-row" wx:if="{{selectedItems.length === 0}}">
+        <text class="field-label">名称</text>
+        <input
+          class="field-control"
+          placeholder="名称"
+          value="{{formData.name}}"
+          bindinput="onInputChange"
+          data-field="name"
+          disabled="{{submitting}}"
+        />
+      </view>
+
+      <view class="field-row" wx:if="{{selectedItems.length === 0}}">
+        <text class="field-label">类别</text>
+        <picker
+          mode="selector"
+          range="{{categories}}"
+          value="{{categoryIndex}}"
+          bindchange="onCategoryChange"
+          disabled="{{submitting}}"
+        >
+          <view class="field-picker picker-display">
+            <text>{{categories[categoryIndex] || '选择类别'}}</text>
+            <text class="chevron">›</text>
+          </view>
+        </picker>
+      </view>
+
+      <view class="field-row">
+        <text class="field-label">位置</text>
+        <view class="pill-group">
+          <view
+            class="pill-option {{formData.location === 'fridge' ? 'active' : ''}}"
+            bindtap="selectLocation"
+            data-location="fridge"
+          >
+            <text class="mr-8">🧊</text>
+            <text>冷藏</text>
+          </view>
+          <view
+            class="pill-option {{formData.location === 'freezer' ? 'active' : ''}}"
+            bindtap="selectLocation"
+            data-location="freezer"
+          >
+            <text class="mr-8">❄️</text>
+            <text>冷冻</text>
+          </view>
+          <view
+            class="pill-option {{formData.location === 'room' ? 'active' : ''}}"
+            bindtap="selectLocation"
+            data-location="room"
+          >
+            <text class="mr-8">🏠</text>
+            <text>常温</text>
+          </view>
+        </view>
+        <view class="storage-advice" wx:if="{{selectedItems.length > 0}}">
+          <text class="storage-advice-text">按位置计算</text>
+        </view>
+        <view class="storage-advice" wx:elif="{{storageSuggestion}}">
+          <text class="storage-advice-text">{{manualLookupLoading ? '查询中...' : storageSuggestion}}</text>
+          <text class="storage-explain-text" wx:if="{{manualExplainText && !manualLookupLoading}}">{{manualExplainText}}</text>
+          <view class="storage-advice-actions" wx:if="{{manualSuggestionReady}}">
+            <button class="advice-action" bindtap="applyManualSuggestion" disabled="{{submitting}}">应用</button>
+          </view>
+        </view>
+      </view>
+
+      <view class="field-row" wx:if="{{selectedItems.length === 0}}">
+        <text class="field-label">天数</text>
+        <input
+          class="field-control"
+          type="number"
+          placeholder="天数"
+          value="{{formData.shelf_life_days}}"
+          bindinput="onInputChange"
+          data-field="shelf_life_days"
+          disabled="{{submitting}}"
+        />
+      </view>
+
+      <view class="field-row" wx:if="{{selectedItems.length === 0}}">
+        <text class="field-label">备注</text>
+        <textarea
+          class="field-textarea"
+          placeholder="可选"
+          value="{{formData.notes}}"
+          bindinput="onInputChange"
+          data-field="notes"
+          maxlength="100"
+          disabled="{{submitting}}"
+        />
+      </view>
+    </view>
+  </view>
+
+  <button
+    wx:if="{{selectedItems.length === 0}}"
+    class="btn btn-primary submit-btn"
+    bindtap="submitFood"
+    disabled="{{submitting || recognizing}}"
+  >{{recognizing ? '识别中...' : submitting ? '保存中...' : '保存'}}</button>
+
+  <view class="batch-bar" wx:if="{{selectedItems.length > 0}}">
+    <view class="batch-info">
+      <text class="batch-count">已选 {{selectedItems.length}} 项</text>
+    </view>
+    <button
+      class="batch-submit"
+      bindtap="submitFood"
+      disabled="{{submitting || recognizing || selectedItems.length === 0}}"
+    >{{submitting ? '保存中' : entryMode === 'whole' ? '整份入库' : '批量入库'}}</button>
+  </view>
+
+  <view class="editor-overlay" wx:if="{{editorVisible}}" catchtap="closeItemEditor">
+    <view class="editor-sheet" catchtap="noop">
+      <view class="editor-handle"></view>
+      <view class="editor-header">
+        <view>
+          <text class="editor-title">编辑</text>
+        </view>
+        <button class="editor-header-save" bindtap="saveEditingItem" disabled="{{submitting}}">保存</button>
+      </view>
+
+      <scroll-view class="editor-scroll" scroll-y>
+        <view class="editor-preview-row">
+          <view class="editor-preview">
+            <image wx:if="{{editDraft.displayImagePath}}" class="editor-preview-image" src="{{editDraft.displayImagePath}}" mode="aspectFill" binderror="onEditImageError" />
+            <image wx:elif="{{editDraft.imagePath}}" class="editor-preview-image" src="{{editDraft.imagePath}}" mode="aspectFill" binderror="onEditImageError" />
+            <image wx:elif="{{imagePath}}" class="editor-preview-image muted" src="{{imagePath}}" mode="aspectFill" />
+            <text wx:else class="selected-thumb-icon">{{getCategoryIcon(editDraft.category)}}</text>
+          </view>
+          <view class="editor-preview-main">
+            <text class="editor-preview-title">{{editDraft.imagePath ? '局部图' : '原图'}}</text>
+            <text class="editor-freshness" wx:if="{{editDraft.freshness_level}}">{{editDraft.freshness_label || getFreshnessLabel(editDraft.freshness_level)}}{{editDraft.freshness_description ? ' · ' + editDraft.freshness_description : ''}}</text>
+            <button class="mini-btn editor-crop-btn" bindtap="cropEditingImage" disabled="{{submitting || !imagePath}}">裁剪</button>
+          </view>
+        </view>
+
+        <view class="field-group editor-fields">
+          <view class="field-row">
+            <text class="field-label">名称</text>
+            <input
+              class="field-control"
+              value="{{editDraft.name}}"
+              bindinput="onEditDraftInputChange"
+              data-field="name"
+              cursor-spacing="180"
+              disabled="{{submitting}}"
+            />
+          </view>
+
+          <view class="field-row">
+            <text class="field-label">类别</text>
+            <picker
+              mode="selector"
+              range="{{categories}}"
+              value="{{editDraft.categoryIndex}}"
+              bindchange="onEditDraftCategoryChange"
+              disabled="{{submitting}}"
+            >
+              <view class="field-picker picker-display">
+                <text>{{editDraft.category}}</text>
+                <text class="chevron">›</text>
+              </view>
+            </picker>
+          </view>
+
+          <view class="field-row">
+            <text class="field-label">天数</text>
+            <input
+              class="field-control"
+              type="number"
+              value="{{editDraft.shelf_life_days}}"
+              bindinput="onEditDraftInputChange"
+              bindblur="onEditDraftInputChange"
+              bindconfirm="onEditDraftInputChange"
+              data-field="shelf_life_days"
+              cursor-spacing="180"
+              disabled="{{submitting}}"
+            />
+          </view>
+
+          <view class="field-row">
+            <text class="field-label">备注</text>
+            <textarea
+              class="field-textarea editor-notes"
+              value="{{editDraft.notes}}"
+              placeholder="可选"
+              bindinput="onEditDraftInputChange"
+              data-field="notes"
+              maxlength="100"
+              cursor-spacing="180"
+              disabled="{{submitting}}"
+            />
+          </view>
+        </view>
+      </scroll-view>
+
+      <view class="editor-actions">
+        <button class="btn btn-outline editor-action-btn" bindtap="closeItemEditor">取消</button>
+        <button class="btn btn-primary editor-action-btn" bindtap="saveEditingItem">保存</button>
+      </view>
+    </view>
+  </view>
+
+  <view class="decision-overlay" wx:if="{{decisionVisible}}" catchtap="closeDecisionSheet">
+    <view class="decision-sheet" catchtap="noop">
+      <view class="editor-handle"></view>
+      <view class="decision-header">
+        <view>
+          <text class="decision-title">{{decisionItem.name}}</text>
+          <text class="decision-freshness" wx:if="{{decisionItem.freshness_level}}">新鲜度：{{decisionItem.freshness_label || getFreshnessLabel(decisionItem.freshness_level)}}{{decisionItem.freshness_description ? ' · ' + decisionItem.freshness_description : ''}}</text>
+        </view>
+      </view>
+
+      <image class="decision-image" wx:if="{{imagePath && decisionSource !== 'manual'}}" src="{{imagePath}}" mode="aspectFill" />
+
+      <view class="decision-toggle">
+        <view
+          class="decision-option {{decisionItem.location === 'fridge' ? 'active' : ''}}"
+          bindtap="selectDecisionLocation"
+          data-location="fridge"
+        >
+          <text class="decision-option-main">🧊 冷藏</text>
+          <text class="decision-option-sub">{{decisionItem.locationDayLabels.fridge}}</text>
+        </view>
+        <view
+          class="decision-option {{decisionItem.location === 'freezer' ? 'active' : ''}}"
+          bindtap="selectDecisionLocation"
+          data-location="freezer"
+        >
+          <text class="decision-option-main">❄️ 冷冻</text>
+          <text class="decision-option-sub">{{decisionItem.locationDayLabels.freezer}}</text>
+        </view>
+        <view
+          class="decision-option {{decisionItem.location === 'room' ? 'active' : ''}}"
+          bindtap="selectDecisionLocation"
+          data-location="room"
+        >
+          <text class="decision-option-main">🌡️ 常温</text>
+          <text class="decision-option-sub">{{decisionItem.locationDayLabels.room}}</text>
+        </view>
+      </view>
+
+      <view class="decision-expiry">
+        <text class="decision-expiry-label">到期</text>
+        <text class="decision-expiry-date">{{decisionItem.expiryPreview || '待确认'}}</text>
+      </view>
+      <view class="decision-explain" wx:if="{{decisionItem.explain_text}}">
+        <text class="decision-explain-title">为什么这样推荐</text>
+        <text class="decision-explain-text">{{decisionItem.explain_text}}</text>
+      </view>
+
+      <button class="btn btn-primary decision-primary" bindtap="confirmDecision">
+        {{decisionSource === 'whole' ? '整份入库' : '确认'}}
+      </button>
+      <button class="decision-secondary" wx:if="{{wholeItem}}" bindtap="switchEntryMode" data-mode="split">拆分</button>
+    </view>
+  </view>
+</view>

@@ -1,0 +1,279 @@
+/* pages/detail/detail.wxss */
+/* 核心风格优化点：单品详情卡保鲜盒化，保存方式使用标签卡，保质期用进度条辅助理解。 */
+
+.page-summary-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 32rpx;
+}
+
+.page-subtitle-inline {
+  margin-bottom: 0;
+}
+
+.skeleton-card {
+  background: var(--card-bg);
+}
+
+.skeleton-line,
+.skeleton-avatar {
+  position: relative;
+  overflow: hidden;
+  background: #EDE8D9;
+}
+
+.skeleton-line::after,
+.skeleton-avatar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, rgba(255,253,247,0) 0%, rgba(255,253,247,0.78) 50%, rgba(255,253,247,0) 100%);
+  animation: shimmer 1.45s infinite;
+}
+
+.detail-skeleton-title {
+  width: 240rpx;
+  height: 72rpx;
+  border-radius: 20rpx;
+}
+
+.detail-skeleton-subtitle,
+.skeleton-line-small,
+.skeleton-line-medium {
+  height: 24rpx;
+  border-radius: 999rpx;
+}
+
+.detail-skeleton-subtitle { width: 320rpx; }
+.skeleton-line-small { width: 180rpx; }
+.skeleton-line-medium { width: 260rpx; }
+
+.skeleton-line-large {
+  width: 140rpx;
+  height: 72rpx;
+  border-radius: 20rpx;
+}
+
+.skeleton-avatar {
+  width: 104rpx;
+  height: 104rpx;
+  border-radius: 50%;
+}
+
+.summary-card {
+  background: linear-gradient(180deg, #FFFDF7 0%, rgba(149, 210, 179, 0.12) 100%);
+}
+
+.detail-food-image {
+  width: 100%;
+  height: 360rpx;
+  margin-bottom: 28rpx;
+  border-radius: 20rpx;
+  background: var(--surface-muted);
+}
+
+.summary-top {
+  display: flex;
+  align-items: center;
+  margin-bottom: 28rpx;
+}
+
+.summary-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 104rpx;
+  height: 104rpx;
+  margin-right: 24rpx;
+  border-radius: 20rpx;
+  background: rgba(255, 253, 247, 0.78);
+  border: 2rpx solid rgba(149, 210, 179, 0.32);
+  box-shadow: inset 0 0 0 8rpx rgba(255, 255, 255, 0.42);
+  font-size: 56rpx;
+}
+
+.summary-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.summary-name {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-bottom: 6rpx;
+  color: var(--text-primary);
+  font-size: 38rpx;
+  font-weight: 780;
+}
+
+.summary-meta {
+  color: var(--text-secondary);
+  font-size: 26rpx;
+}
+
+.summary-bottom {
+  padding-top: 24rpx;
+  border-top: 1px solid var(--cell-border);
+}
+
+.summary-label {
+  display: block;
+  margin-bottom: 8rpx;
+  color: var(--text-secondary);
+  font-size: 24rpx;
+}
+
+.summary-date {
+  color: var(--text-primary);
+  font-size: 34rpx;
+  font-weight: 700;
+}
+
+.detail-freshness {
+  overflow: hidden;
+  height: 12rpx;
+  margin-top: 20rpx;
+  border-radius: 999rpx;
+  background: rgba(233, 236, 239, 0.84);
+}
+
+.detail-freshness-fill {
+  height: 100%;
+  border-radius: 999rpx;
+}
+
+.detail-fresh .detail-freshness-fill {
+  width: 82%;
+  background: var(--success-color);
+}
+
+.detail-warning .detail-freshness-fill {
+  width: 42%;
+  background: var(--warning-color);
+}
+
+.detail-expired .detail-freshness-fill {
+  width: 14%;
+  background: var(--danger-color);
+}
+
+.detail-section-header {
+  padding: 0 8rpx;
+  margin-bottom: 20rpx;
+}
+
+.location-recalc-card {
+  padding: 28rpx;
+}
+
+.location-recalc-header {
+  padding: 0;
+}
+
+.location-options {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14rpx;
+}
+
+.location-option {
+  padding: 18rpx 10rpx;
+  border-radius: 20rpx;
+  background: rgba(255, 253, 247, 0.78);
+  border: 2rpx solid var(--neutral-light);
+  text-align: center;
+  transition: opacity 0.16s ease, transform 0.16s ease;
+}
+
+.location-option:active {
+  opacity: 0.84;
+  transform: scale(0.98);
+}
+
+.location-option.active {
+  background: rgba(149, 210, 179, 0.18);
+  border-color: rgba(149, 210, 179, 0.52);
+  box-shadow: 0 8rpx 18rpx rgba(149, 210, 179, 0.16);
+}
+
+.location-option-title,
+.location-option-days {
+  display: block;
+}
+
+.location-option-title {
+  margin-bottom: 8rpx;
+  color: var(--text-primary);
+  font-size: 24rpx;
+  font-weight: 750;
+}
+
+.location-option-days {
+  color: var(--text-secondary);
+  font-size: 22rpx;
+}
+
+.location-tip {
+  display: block;
+  margin-top: 18rpx;
+  padding: 16rpx 18rpx;
+  border-radius: 18rpx;
+  background: rgba(149, 210, 179, 0.14);
+  border: 1rpx solid rgba(149, 210, 179, 0.28);
+  color: var(--primary-deep);
+  font-size: 24rpx;
+  line-height: 1.4;
+}
+
+.shelf-explain-card {
+  margin-top: 18rpx;
+  padding: 20rpx 22rpx;
+  border-radius: 20rpx;
+  background: rgba(255, 253, 247, 0.88);
+  border: 1rpx solid rgba(149, 210, 179, 0.26);
+}
+
+.shelf-explain-label {
+  display: block;
+  margin-bottom: 8rpx;
+  color: var(--primary-deep);
+  font-size: 24rpx;
+  font-weight: 800;
+}
+
+.shelf-explain-text {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 24rpx;
+  line-height: 1.5;
+}
+
+.row-value {
+  margin-left: 24rpx;
+  color: var(--text-primary);
+  font-size: 28rpx;
+  font-weight: 650;
+}
+
+.notes-card {
+  line-height: 1.7;
+}
+
+.notes-text {
+  color: var(--text-primary);
+  font-size: 28rpx;
+}
+
+.detail-delete-btn {
+  margin-bottom: 20rpx;
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}

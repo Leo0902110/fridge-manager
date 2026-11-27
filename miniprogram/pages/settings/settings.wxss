@@ -1,0 +1,117 @@
+/* pages/settings/settings.wxss */
+/* 核心风格优化点：设置页保持低干扰，功能入口用柔色手绘感小图标承接全局风格。 */
+
+.profile-card {
+  display: flex;
+  align-items: center;
+  background: linear-gradient(145deg, #FFFDF7 0%, rgba(149, 210, 179, 0.14) 100%);
+}
+
+.profile-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 104rpx;
+  height: 104rpx;
+  margin-right: 24rpx;
+  border-radius: 20rpx;
+  background: linear-gradient(135deg, #AEE0C4 0%, #95D2B3 100%);
+  color: #FFFFFF;
+  font-size: 42rpx;
+  font-weight: 800;
+  box-shadow: var(--soft-shadow), inset 0 0 0 6rpx rgba(255, 255, 255, 0.24);
+}
+
+.profile-main {
+  flex: 1;
+}
+
+.profile-name {
+  display: block;
+  color: var(--text-primary);
+  font-size: 34rpx;
+  font-weight: 780;
+}
+
+.stats-card {
+  background: linear-gradient(180deg, #FFFDF7 0%, #FBF7EC 100%);
+}
+
+.stats-header,
+.settings-section-header {
+  padding: 0 8rpx;
+  margin-bottom: 20rpx;
+}
+
+.stats-grid {
+  display: flex;
+}
+
+.stat-item {
+  flex: 1;
+  text-align: center;
+}
+
+.stat-item:not(:last-child) {
+  border-right: 1px solid var(--cell-border);
+}
+
+.stat-value {
+  display: block;
+  margin-bottom: 8rpx;
+  color: var(--primary-deep);
+  font-size: 42rpx;
+  font-weight: 800;
+}
+
+.stat-label {
+  color: var(--text-secondary);
+  font-size: 24rpx;
+}
+
+.settings-cell {
+  min-height: 110rpx;
+}
+
+.item-leading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 58rpx;
+  height: 58rpx;
+  margin-right: 18rpx;
+  border-radius: 18rpx;
+  color: #FFFFFF;
+  font-size: 28rpx;
+  font-weight: 800;
+  box-shadow: inset 0 0 0 4rpx rgba(255, 255, 255, 0.18);
+}
+
+.item-leading.blue {
+  background: var(--primary-color);
+}
+
+.item-leading.green {
+  background: var(--success-color);
+}
+
+.item-leading.orange {
+  background: var(--warning-color);
+}
+
+.item-leading.gray {
+  background: var(--neutral-mid);
+}
+
+.version-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24rpx 0 48rpx;
+}
+
+.version-text {
+  margin-bottom: 8rpx;
+  color: var(--text-secondary);
+  font-size: 24rpx;
+}

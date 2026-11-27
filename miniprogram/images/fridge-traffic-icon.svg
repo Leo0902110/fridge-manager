@@ -1,0 +1,59 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="122" y1="88" x2="902" y2="930" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFDF7"/>
+      <stop offset="0.48" stop-color="#F8F4E9"/>
+      <stop offset="1" stop-color="#EAF6EF"/>
+    </linearGradient>
+    <linearGradient id="fridgeShell" x1="268" y1="152" x2="704" y2="884" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#AEE0C4"/>
+      <stop offset="0.5" stop-color="#95D2B3"/>
+      <stop offset="1" stop-color="#5FAE86"/>
+    </linearGradient>
+    <linearGradient id="door" x1="330" y1="206" x2="662" y2="820" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#EEF8F2"/>
+    </linearGradient>
+    <filter id="mainShadow" x="170" y="112" width="712" height="838" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="36" stdDeviation="38" flood-color="#5FAE86" flood-opacity="0.22"/>
+      <feDropShadow dx="0" dy="14" stdDeviation="16" flood-color="#495057" flood-opacity="0.10"/>
+    </filter>
+    <filter id="lightGlow" x="552" y="210" width="274" height="506" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#495057" flood-opacity="0.14"/>
+    </filter>
+  </defs>
+
+  <rect width="1024" height="1024" rx="232" fill="url(#bg)"/>
+  <circle cx="210" cy="198" r="122" fill="#95D2B3" opacity="0.16"/>
+  <circle cx="808" cy="208" r="142" fill="#F5B86E" opacity="0.15"/>
+  <circle cx="792" cy="814" r="176" fill="#95D2B3" opacity="0.13"/>
+
+  <g filter="url(#mainShadow)">
+    <rect x="250" y="148" width="472" height="736" rx="112" fill="url(#fridgeShell)"/>
+    <rect x="316" y="208" width="340" height="616" rx="72" fill="url(#door)"/>
+
+    <path d="M316 452H656" stroke="#BCE6CF" stroke-width="28" stroke-linecap="round"/>
+    <path d="M414 286V374" stroke="#5FAE86" stroke-width="34" stroke-linecap="round"/>
+    <path d="M414 534V674" stroke="#5FAE86" stroke-width="34" stroke-linecap="round"/>
+
+    <rect x="382" y="728" width="78" height="40" rx="20" fill="#D7EFE2"/>
+    <rect x="536" y="728" width="78" height="40" rx="20" fill="#D7EFE2"/>
+
+    <path d="M500 360C558 318 612 330 650 388C593 428 536 422 500 360Z" fill="#95D2B3"/>
+    <path d="M500 360C548 380 592 396 650 388" stroke="#5FAE86" stroke-width="16" stroke-linecap="round"/>
+  </g>
+
+  <g filter="url(#lightGlow)">
+    <rect x="596" y="254" width="164" height="408" rx="82" fill="#33423B"/>
+    <rect x="620" y="278" width="116" height="360" rx="58" fill="#495057"/>
+    <circle cx="678" cy="344" r="42" fill="#D86464"/>
+    <circle cx="678" cy="458" r="42" fill="#F5B86E"/>
+    <circle cx="678" cy="572" r="42" fill="#A7D676"/>
+    <circle cx="664" cy="330" r="12" fill="#FFFFFF" opacity="0.72"/>
+    <circle cx="664" cy="444" r="12" fill="#FFFFFF" opacity="0.72"/>
+    <circle cx="664" cy="558" r="12" fill="#FFFFFF" opacity="0.72"/>
+  </g>
+
+  <path d="M214 700C184 668 168 628 168 582" stroke="#95D2B3" stroke-width="28" stroke-linecap="round" opacity="0.54"/>
+  <path d="M206 778C142 716 108 638 108 552" stroke="#F5B86E" stroke-width="24" stroke-linecap="round" opacity="0.44"/>
+</svg>

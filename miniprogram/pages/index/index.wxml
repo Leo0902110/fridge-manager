@@ -1,0 +1,271 @@
+<!--pages/index/index.wxml - 首页-->
+<!-- 核心风格优化点：操作台、保鲜盒卡片、新鲜度进度条、临期提醒与空状态统一轻氧家居治愈风。 -->
+<view class="container tab-page">
+  <text class="large-title">冰箱</text>
+  <view class="page-summary-row">
+    <text class="refresh-state {{loading ? 'loading' : ''}}">{{lastUpdatedText}}</text>
+  </view>
+
+  <view wx:if="{{loading && !initialized}}">
+    <view class="hero-card card skeleton-card">
+      <view class="skeleton-line skeleton-line-small mb-16"></view>
+      <view class="skeleton-line skeleton-line-large mb-32"></view>
+      <view class="skeleton-metrics">
+        <view class="skeleton-block"></view>
+        <view class="skeleton-block"></view>
+        <view class="skeleton-block"></view>
+      </view>
+    </view>
+
+    <view class="section-header">
+      <text class="section-title">全部食物</text>
+    </view>
+    <view class="list-group">
+      <view class="list-cell skeleton-cell" wx:for="{{[1,2,3]}}" wx:key="*this">
+        <view class="skeleton-avatar"></view>
+        <view class="list-main">
+          <view class="skeleton-line skeleton-line-medium mb-8"></view>
+          <view class="skeleton-line skeleton-line-small"></view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <block wx:else>
+
+  <view class="hero-card card">
+    <view class="hero-top">
+      <view>
+        <text class="hero-label">库存</text>
+        <text class="hero-value">{{stats.total}}</text>
+      </view>
+      <text class="hero-chip" wx:if="{{refreshing}}">刷新中</text>
+    </view>
+
+    <view class="hero-metrics">
+      <view class="metric-item">
+        <text class="metric-value fresh">{{stats.fresh_count}}</text>
+        <text class="metric-label">新鲜</text>
+      </view>
+      <view class="metric-item">
+        <text class="metric-value warning">{{stats.warning_count}}</text>
+        <text class="metric-label">临期</text>
+      </view>
+      <view class="metric-item">
+        <text class="metric-value expired">{{stats.expired_count}}</text>
+        <text class="metric-label">过期</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="action-dashboard card">
+    <view class="section-header action-header">
+      <text class="section-title">临期提醒</text>
+    </view>
+
+    <view class="expired-alert" wx:if="{{expiredFoods.length > 0}}">
+      <text class="expired-alert-icon">!</text>
+      <text class="expired-alert-title">过期 {{expiredFoods.length}} 项需要处理</text>
+    </view>
+    <view class="expired-list" wx:if="{{expiredFoods.length > 0}}">
+      <view
+        class="expired-item-card"
+        wx:for="{{expiredFoods}}"
+        wx:key="id"
+        bindtap="goToDetail"
+        data-id="{{item.id}}"
+      >
+        <view class="action-main">
+          <image class="action-food-thumb expired-thumb" wx:if="{{item.display_image_url}}" src="{{item.display_image_url}}" mode="aspectFill" binderror="onFoodImageError" data-id="{{item.id}}" data-url="{{item.image_url}}" />
+          <text class="action-icon expired-icon" wx:else>{{getCategoryIcon(item.category)}}</text>
+          <view class="list-main">
+            <text class="list-title">{{item.name}}</text>
+            <text class="list-subtitle expired-subtitle">{{item.countdownText}}</text>
+          </view>
+        </view>
+        <text class="expired-chip">处理</text>
+      </view>
+    </view>
+
+    <view wx:if="{{actionFoods.length > 0}}">
+      <view
+        class="action-swipe-shell action-swipe-{{item.swipeDirection}}"
+        wx:for="{{actionFoods}}"
+        wx:key="id"
+        bindtouchstart="onActionTouchStart"
+        bindtouchmove="onActionTouchMove"
+        bindtouchend="onActionTouchEnd"
+        bindtouchcancel="onActionTouchEnd"
+        data-id="{{item.id}}"
+        data-index="{{index}}"
+      >
+        <view class="action-swipe-bg action-swipe-bg-left">
+          <view class="action-swipe-label eat">
+            <text class="action-swipe-icon">✓</text>
+            <text>吃完</text>
+          </view>
+        </view>
+        <view class="action-swipe-bg action-swipe-bg-right">
+          <view class="action-swipe-label discard">
+            <text class="action-swipe-icon">×</text>
+            <text>丢弃</text>
+          </view>
+        </view>
+
+        <view
+          class="action-card action-{{item.riskType}} {{item.swipeMoving ? 'swiping' : ''}}"
+          style="transform: translateX({{item.swipeOffset || 0}}px);"
+          bindtap="handleActionTap"
+          data-id="{{item.id}}"
+          data-index="{{index}}"
+        >
+          <view class="action-main">
+            <image class="action-food-thumb" wx:if="{{item.display_image_url}}" src="{{item.display_image_url}}" mode="aspectFill" binderror="onFoodImageError" data-id="{{item.id}}" data-url="{{item.image_url}}" />
+            <text class="action-icon" wx:else>{{getCategoryIcon(item.category)}}</text>
+            <view class="list-main">
+              <text class="list-title">{{item.name}}</text>
+              <text class="list-subtitle">{{item.countdownText}}</text>
+            </view>
+          </view>
+          <text class="countdown-chip">{{item.badgeText}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="zero-waste" wx:if="{{actionFoods.length === 0 && expiredFoods.length === 0}}">
+      <text class="zero-waste-title">🎉 无临期</text>
+    </view>
+
+    <view class="recipe-prompt" wx:if="{{foodList.length > 0}}">
+      <view class="recipe-prompt-main">
+        <text class="recipe-prompt-title">用临期食材做一餐</text>
+        <text class="recipe-prompt-subtitle">优先消耗快到期库存</text>
+      </view>
+      <button
+        class="recipe-action-btn"
+        bindtap="generateTodayRecipe"
+        disabled="{{recipeLoading || foodList.length === 0}}"
+      >{{recipeLoading ? '生成中' : '生成菜谱'}}</button>
+    </view>
+  </view>
+
+  <view class="section-header inventory-header">
+    <view>
+      <text class="section-title">库存</text>
+    </view>
+    <view class="segmented-control">
+      <text
+        class="segment-item {{inventoryZone === 'fridge' ? 'active' : ''}}"
+        bindtap="setInventoryZone"
+        data-zone="fridge"
+      >冷藏</text>
+      <text
+        class="segment-item {{inventoryZone === 'freezer' ? 'active' : ''}}"
+        bindtap="setInventoryZone"
+        data-zone="freezer"
+      >冷冻</text>
+    </view>
+  </view>
+
+  <scroll-view class="quick-filter-scroll" scroll-x wx:if="{{foodList.length > 0}}">
+    <view class="quick-filter-row">
+      <text class="quick-chip {{quickFilter === 'all' ? 'active' : ''}}" bindtap="setQuickFilter" data-filter="all">全部</text>
+      <text class="quick-chip {{quickFilter === 'warning' ? 'active' : ''}}" bindtap="setQuickFilter" data-filter="warning">临期</text>
+      <text class="quick-chip {{quickFilter === '肉类' ? 'active' : ''}}" bindtap="setQuickFilter" data-filter="肉类">肉类</text>
+      <text class="quick-chip {{quickFilter === '水果' ? 'active' : ''}}" bindtap="setQuickFilter" data-filter="水果">水果</text>
+      <text class="quick-chip {{quickFilter === '蔬菜' ? 'active' : ''}}" bindtap="setQuickFilter" data-filter="蔬菜">蔬菜</text>
+      <text class="quick-chip {{quickFilter === '熟食' ? 'active' : ''}}" bindtap="setQuickFilter" data-filter="熟食">熟食</text>
+      <text class="quick-chip {{quickFilter === '乳制品' ? 'active' : ''}}" bindtap="setQuickFilter" data-filter="乳制品">饮品</text>
+    </view>
+  </scroll-view>
+
+  <view class="risk-list" wx:if="{{filteredInventory.length > 0}}">
+    <view
+      class="risk-food-card risk-{{item.riskType}}"
+      wx:for="{{filteredInventory}}"
+      wx:key="id"
+      bindtap="goToDetail"
+      data-id="{{item.id}}"
+    >
+      <view class="risk-light"></view>
+      <view class="risk-main">
+        <image class="risk-food-thumb" wx:if="{{item.display_image_url}}" src="{{item.display_image_url}}" mode="aspectFill" binderror="onFoodImageError" data-id="{{item.id}}" data-url="{{item.image_url}}" />
+        <view class="risk-food-icon" wx:else>
+          <text>{{getCategoryIcon(item.category)}}</text>
+        </view>
+        <view class="risk-copy">
+          <text class="risk-title">{{item.name}}</text>
+          <text class="risk-subtitle">{{item.location === 'fridge' ? '冷藏' : item.location === 'freezer' ? '冷冻' : '常温'}} · {{item.category || '其他'}}</text>
+          <view class="freshness-bar">
+            <view class="freshness-fill"></view>
+          </view>
+        </view>
+      </view>
+      <view class="risk-meta">
+        <text class="risk-countdown">{{item.countdownText}}</text>
+        <text class="risk-badge">{{item.badgeText}}</text>
+        <text class="chevron">›</text>
+      </view>
+    </view>
+  </view>
+  <view class="empty-state card" wx:else>
+    <view class="icon fridge-doodle">
+      <view class="fridge-line top"></view>
+      <view class="fridge-line middle"></view>
+      <view class="fridge-handle"></view>
+      <view class="fridge-dot"></view>
+    </view>
+    <text class="empty-title">冰箱还很清爽</text>
+    <text class="empty-subtitle">拍照记录第一份食材，让保鲜更安心</text>
+    <button class="btn btn-primary empty-btn" bindtap="goToAdd">添加食物</button>
+  </view>
+  </block>
+
+  <view class="undo-snackbar" wx:if="{{undoVisible}}">
+    <text>{{undoText}}</text>
+    <button class="undo-btn" bindtap="undoLastAction">撤销</button>
+  </view>
+
+  <view class="recipe-overlay" wx:if="{{recipeVisible}}" catchtap="closeRecipeSheet">
+    <view class="recipe-sheet" catchtap="noop">
+      <view class="recipe-handle"></view>
+      <view wx:if="{{recipeLoading}}" class="recipe-loading">
+        <text>正在根据冰箱库存生成...</text>
+      </view>
+      <block wx:elif="{{todayRecipe}}">
+        <view class="recipe-header">
+          <text class="recipe-kicker">{{todayRecipe.source === 'ai' ? 'AI 今日菜谱' : '今日菜谱'}}</text>
+          <text class="recipe-title">{{todayRecipe.title}}</text>
+          <text class="recipe-subtitle">{{todayRecipe.subtitle}}</text>
+        </view>
+
+        <view class="recipe-warning" wx:if="{{todayRecipe.expired_warnings.length > 0}}">
+          <text wx:for="{{todayRecipe.expired_warnings}}" wx:key="*this">{{item}}</text>
+        </view>
+
+        <view class="recipe-section">
+          <text class="recipe-section-title">优先使用</text>
+          <view class="recipe-ingredient" wx:for="{{todayRecipe.ingredients}}" wx:key="id">
+            <text class="recipe-ingredient-name">{{item.name}}</text>
+            <text class="recipe-ingredient-reason">{{item.reason}}</text>
+          </view>
+        </view>
+
+        <view class="recipe-section">
+          <text class="recipe-section-title">做法</text>
+          <view class="recipe-step" wx:for="{{todayRecipe.steps}}" wx:key="*this">
+            <text class="recipe-step-index">{{index + 1}}</text>
+            <text class="recipe-step-text">{{item}}</text>
+          </view>
+        </view>
+
+        <view class="recipe-section" wx:if="{{todayRecipe.tips.length > 0}}">
+          <text class="recipe-section-title">提醒</text>
+          <text class="recipe-tip" wx:for="{{todayRecipe.tips}}" wx:key="*this">{{item}}</text>
+        </view>
+
+        <button class="btn btn-primary recipe-close-btn" bindtap="closeRecipeSheet">知道了</button>
+      </block>
+    </view>
+  </view>
+</view>
